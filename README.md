@@ -22,6 +22,4 @@ echo 'Response code: '.$code;
 echo '<br><br>';
 echo 'Result:';
 echo '<br>';
-echo '<pre>';
 print_r($response);
-echo '</pre>';

@@ -17,6 +17,4 @@ $result = $app->getPublicPosts();
 
 $code = $result['code'];
 $response = $result['res'];
-
-?>
 </pre>

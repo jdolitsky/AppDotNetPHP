@@ -8,6 +8,7 @@ This library has not been tested, nor has it implemented any OAuth authenticatio
 
 Example usage:
 <pre>
+<?php
 
 require ('AppDotNet.php');
 
@@ -19,9 +20,5 @@ $result = $app->getPublicPosts();
 $code = $result['code'];
 $response = $result['res'];
 
-echo 'Response code: '.$code;
-echo '<br><br>';
-echo 'Result:';
-echo '<br>';
-print_r($response);
+?>
 </pre>

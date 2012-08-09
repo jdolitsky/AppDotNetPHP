@@ -8,8 +8,6 @@ This library has not been tested, nor has it implemented any OAuth authenticatio
 
 Example usage:
 
-<?php
-
 require ('AppDotNet.php');
 
 $app = new AppDotNet();
@@ -27,5 +25,3 @@ echo '<br>';
 echo '<pre>';
 print_r($response);
 echo '</pre>';
-
-?>

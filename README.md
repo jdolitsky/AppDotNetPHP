@@ -33,7 +33,9 @@ if ($app->getSession()) {
 
 // if not, redirect to sign in
 } else {
+
 	$url = $app->getAuthUrl();
 	header('Loacation: '.$url);
+	
 }
 </pre>

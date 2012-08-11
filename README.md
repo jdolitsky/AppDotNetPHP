@@ -17,6 +17,28 @@ A good example of how to sign in, sign out, and retrieve data can be found in in
 
 Here is a simple example:
 <pre>
+
+require_once 'AppDotNet.php';
+
+$app = new AppDotNet();
+
+// check that the user is signed in
+if ($app->getSession()) {
+
+  // get the current user as JSON
+	$data = $app->getUser();
+
+	// accessing the user's name
+	echo 'Welcome '.$data['name'];
+
+// otherwise prompt to sign in
+} else {
+
+	$url = $app->getAuthUrl();
+	echo '<a href="'.$url.'"><h2>Sign in using App.net</h2></a>';
+
+}
+
 require ('AppDotNet.php');
 
 $app = new AppDotNet();

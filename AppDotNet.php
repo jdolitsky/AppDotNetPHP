@@ -261,8 +261,8 @@ class AppDotNet {
 
 	// Retrieve a Stream of all public Posts on App.net.
 	function getPublicPosts() {
-
-		return $this->httpGet($this->_baseUrl.'streams/public');
+		return $this->httpGet($this->_baseUrl.'posts/stream/global');
+		//return $this->httpGet($this->_baseUrl.'streams/public');
 
 	}
 

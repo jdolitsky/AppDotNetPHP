@@ -32,7 +32,7 @@ if ($app->getSession()) {
 } else {
 
 	$url = $app->getAuthUrl();
-	header('Loacation: '.$url);
+	header('Location: '.$url);
 	
 }
 </code>

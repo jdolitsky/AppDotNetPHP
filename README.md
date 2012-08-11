@@ -12,7 +12,7 @@ Usage:
 --------
 Good examples of how to use the library can be found in <b>index.php</b>, <b>callback.php</b>, and <b>signout.php</b>
 
-Here is a simple example of sign-in and data retieval:
+Here is a simple example of sign-in and data retrieval:
 <pre>
 <code>
 require_once 'AppDotNet.php';

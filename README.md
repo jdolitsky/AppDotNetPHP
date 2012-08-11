@@ -13,7 +13,7 @@ Setup:
 
 Usage:
 --------
-Examples of usage can be found in the examples directory
+Examples of how to use the library can be found in index.php, callback.php, and signout.php
 
 Here is a simple example of sign-in and data retieval:
 <pre>

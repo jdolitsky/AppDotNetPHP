@@ -13,6 +13,9 @@ Setup:
 
 Usage:
 --------
+A good example of sign in, sign out, and data retrieval can be found in index.php
+
+Here is a simple example:
 <pre>
 require ('AppDotNet.php');
 

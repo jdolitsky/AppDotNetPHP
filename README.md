@@ -13,9 +13,9 @@ Setup:
 Open up AppDotNet.php for editing.
 
 You will need to change the values for the following:
-<li>
-<ol>i</ol>
-</li>
+<ol>
+<li>i</li>
+</ol>
 
 Usage:
 --------

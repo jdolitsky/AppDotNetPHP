@@ -1,7 +1,7 @@
 AppDotNetPHP
 ============
 
-Preliminary PHP library for the App.net platform
+PHP library for the App.net platform
 
 More info on App.net here: https://github.com/appdotnet/api-spec
 

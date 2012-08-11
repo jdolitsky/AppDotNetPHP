@@ -40,7 +40,7 @@ if ($app->getSession()) {
 
 Setup:
 --------
-Open up AppDotNet.php for editing
+Open up <b>AppDotNet.php</b> for editing
 
 You will need to change the values for the following between lines 22-34:
 <ol>

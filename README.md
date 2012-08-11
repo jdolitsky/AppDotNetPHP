@@ -14,7 +14,7 @@ Open up AppDotNet.php for editing.
 
 You will need to change the values for the following:
 <ol>
-<li>i</li>
+<ul>i</ul>
 </ol>
 
 Usage:

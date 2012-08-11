@@ -13,7 +13,7 @@ Setup:
 
 Usage:
 --------
-A good example of sign in, sign out, and data retrieval can be found in index.php
+A good example of how to sign in, sign out, and retrieve data can be found in index.php
 
 Here is a simple example:
 <pre>

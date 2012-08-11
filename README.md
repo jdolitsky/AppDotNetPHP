@@ -42,7 +42,7 @@ Setup:
 --------
 Open up AppDotNet.php for editing
 
-You will need to change the values for the following between lines 23-34:
+You will need to change the values for the following between lines 22-34:
 <ol>
 <ul>Client ID</ul>
 <ul>Client Secret</ul>

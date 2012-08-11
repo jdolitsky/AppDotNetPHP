@@ -1,9 +1,9 @@
 AppDotNetPHP
 ============
 
-PHP library for the App.net platform
+PHP library for the App.net Stream API
 
-More info on App.net here: https://github.com/appdotnet/api-spec
+More info on the App.net Stream API here: https://github.com/appdotnet/api-spec
 
 NOTE:
 This library has not been thoroughly tested. 

@@ -1,19 +1,13 @@
 <?php
 /*
 |
-|  Unofficial App.net PHP library
+|  AppDotNetPHP: App.net PHP library
 |    created by Josh Dolitsky, August 2012
 |    https://github.com/jdolitsky/AppDotNetPHP
 |
 |  For more info on App.net, please visit:
 |    https://join.app.net/
 |    https://github.com/appdotnet/api-spec
-|
-|  NOTE:
-|    This library has not been tested, nor has it
-|    implemented any OAuth authentication measures. It 
-|    is a preliminary model to help guide future 
-|    App.net platform development with PHP
 |
 */
 

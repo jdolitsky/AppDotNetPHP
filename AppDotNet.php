@@ -60,7 +60,7 @@ class AppDotNet {
 		return $this->_authSignInUrl;
 	}
 
-	// returns the authentication URL constructed above
+	// user login
 	function setSession() {
 		if (isset($_GET['code'])) {
 			$code = $_GET['code'];

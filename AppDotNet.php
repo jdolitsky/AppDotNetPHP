@@ -17,6 +17,9 @@
 |
 */
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 class AppDotNet {
 
 	var $_baseUrl = 'https://api.app.net/stream/0/';
@@ -74,7 +77,7 @@ class AppDotNet {
 	// Return the Filters for the current user.
 	function getAllFilters() {
 		
-		return httpGet($this->_baseUrl.'filters');
+		return $this->httpGet($this->_baseUrl.'filters');
 
 	}
 
@@ -85,14 +88,14 @@ class AppDotNet {
 		$params = array('name'=>$name, 'user_ids'=>$user_ids, 'hashtags'=>$hashtags,
 				'link_domains'=>$link_domains, 'mention_user_ids'=>$mention_user_ids);
 		
-		return httpPost($this->_baseUrl.'filters',$params);
+		return $this->httpPost($this->_baseUrl.'filters',$params);
 
 	}
 
 	// Returns a specific Filter object.
 	function getFilter($filter_id=null) {
 		
-		return httpGet($this->_baseUrl.'filters/'.$filter_id);
+		return $this->httpGet($this->_baseUrl.'filters/'.$filter_id);
 
 	}
 
@@ -100,7 +103,7 @@ class AppDotNet {
 	// It returns the deleted Filter on success.
 	function deleteFilter($filter_id=null) {
 		
-		return httpDelete($this->_baseUrl.'filters');
+		return $this->httpDelete($this->_baseUrl.'filters');
 
 	}
 
@@ -113,14 +116,14 @@ class AppDotNet {
 		$params = array('text'=>$text, 'reply_to'=>$reply_to, 
                                 'annotations'=>$annotations, 'links'=>$links);
 
-		return httpPost($this->_baseUrl.'posts',$params);
+		return $this->httpPost($this->_baseUrl.'posts',$params);
 
 	}
 
 	// Returns a specific Post.
 	function getPost($post_id=null) {
 
-		return httpGet($this->_baseUrl.'posts/'.$post_id);
+		return $this->httpGet($this->_baseUrl.'posts/'.$post_id);
 
 	}
 
@@ -128,14 +131,14 @@ class AppDotNet {
 	// It returns the deleted Post on success.
 	function deletePost($post_id=null) {
 
-		return httpDelete($this->_baseUrl.'posts/'.$post_id);
+		return $this->httpDelete($this->_baseUrl.'posts/'.$post_id);
 
 	}
 
 	// Retrieve the Posts that are 'in reply to' a specific Post.
 	function getPostReplies($post_id=null) {
 
-		return httpGet($this->_baseUrl.'posts/'.$post_id.'/replies');
+		return $this->httpGet($this->_baseUrl.'posts/'.$post_id.'/replies');
 
 	}
 
@@ -143,7 +146,7 @@ class AppDotNet {
 	// chronological order.
 	function getUserPosts($user_id='me') {
 
-		return httpGet($this->_baseUrl.'users/'.$user_id.'/posts');
+		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/posts');
 
 	}
 
@@ -152,7 +155,7 @@ class AppDotNet {
 	// chronological order.
 	function getUserMentions($user_id='me') {
 
-		return httpGet($this->_baseUrl.'users/'.$user_id.'/mentions');
+		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/mentions');
 
 	}
 
@@ -160,14 +163,14 @@ class AppDotNet {
 	// the Users they follow.
 	function getUserStream($user_id='me') {
 
-		return httpGet($this->_baseUrl.'users/'.$user_id.'/stream');
+		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/stream');
 
 	}
 
 	// Returns a specific User object.
 	function getUser($user_id='me') {
 
-		return httpGet($this->_baseUrl.'users/'.$user_id);
+		return $this->httpGet($this->_baseUrl.'users/'.$user_id);
 
 	}
 
@@ -175,7 +178,7 @@ class AppDotNet {
 	// is similar to the 'Retrieve a User's personalized stream' endpoint.
 	function getUserRealTimeStream() {
 
-		return httpGet($this->_baseUrl.'streams/user');
+		return $this->httpGet($this->_baseUrl.'streams/user');
 
 	}
 
@@ -184,28 +187,28 @@ class AppDotNet {
 	function getUsersRealTimeStream($user_ids=null) {
 
 		$str = json_encode($user_ids);
-		return httpGet($this->_baseUrl.'streams/app?user_ids='.$str);
+		return $this->httpGet($this->_baseUrl.'streams/app?user_ids='.$str);
 
 	}
 
 	// Retrieve a Stream of all public Posts on App.net.
 	function getPublicPosts() {
 
-		return httpGet($this->_baseUrl.'streams/public');
+		return $this->httpGet($this->_baseUrl.'streams/public');
 
 	}
 
 	// Retrieve the current status for a specific Stream
 	function getStreamStatus($stream_id=null) {
 
-		return httpGet($this->_baseUrl.'streams/'.$stream_id);
+		return $this->httpGet($this->_baseUrl.'streams/'.$stream_id);
 
 	}
 
 	// Change the Posts returned in the specified Stream.
 	function controlStream($stream_id=null, $data=array()) {
 
-		return httpPost($this->_baseUrl.'streams/'.$stream_id, $data);
+		return $this->httpPost($this->_baseUrl.'streams/'.$stream_id, $data);
 
 	}
 
@@ -213,7 +216,7 @@ class AppDotNet {
 	// This resource must be accessed with an App access token.
 	function listSubscriptions() {
 
-		return httpGet($this->_baseUrl.'subscriptions');
+		return $this->httpGet($this->_baseUrl.'subscriptions');
 
 	}
 
@@ -227,7 +230,7 @@ class AppDotNet {
 		$params = array('object'=>$object, 'aspect'=>$aspect, 
                            'callback_url'=>$callback_url, 'verify_token'=>$verify_token);
 
-		return httpPost($this->_baseUrl.'subscriptions', $params);
+		return $this->httpPost($this->_baseUrl.'subscriptions', $params);
 
 	}
 
@@ -235,7 +238,7 @@ class AppDotNet {
 	// This resource must be accessed with an App access token.
 	function deleteSubscription($subscription_id=null) {
 
-		return httpDelete($this->_baseUrl.'subscriptions/'.$subscription_id);
+		return $this->httpDelete($this->_baseUrl.'subscriptions/'.$subscription_id);
 
 	}
 
@@ -244,7 +247,7 @@ class AppDotNet {
 	// an App access token.
 	function deleteAllSubscriptions() {
 
-		return httpDelete($this->_baseUrl.'subscriptions');
+		return $this->httpDelete($this->_baseUrl.'subscriptions');
 
 	}
 

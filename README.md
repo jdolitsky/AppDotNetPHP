@@ -13,6 +13,7 @@ Usage:
 Examples of how to use the library can be found in <b>index.php</b>, <b>callback.php</b>, and <b>signout.php</b>
 
 Here is a simple example of sign-in and data retieval:
+<pre>
 <code>
 require_once 'AppDotNet.php';
 
@@ -35,6 +36,7 @@ if ($app->getSession()) {
 	
 }
 </code>
+</pre>
 
 Setup:
 --------

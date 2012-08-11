@@ -25,7 +25,7 @@ $app = new AppDotNet();
 // check that the user is signed in
 if ($app->getSession()) {
 
-  // get the current user as JSON
+        // get the current user as JSON
 	$data = $app->getUser();
 
 	// accessing the user's name
@@ -35,7 +35,7 @@ if ($app->getSession()) {
 } else {
 
 	$url = $app->getAuthUrl();
-	echo '<a href="'.$url.'"><h2>Sign in using App.net</h2></a>';
+	echo '\<a href="'.$url.'"><h2>Sign in using App.net</h2></a>';
 
 }
 

@@ -13,11 +13,10 @@ Setup:
 
 Usage:
 --------
-A good example of how to sign in, sign out, and retrieve data can be found in index.php
+Examples of usage can be found in the examples directory
 
-Here is a simple example:
+Here is a simple example of sign-in and data retieval:
 <pre>
-
 require_once 'AppDotNet.php';
 
 $app = new AppDotNet();

@@ -14,8 +14,27 @@ Open up AppDotNet.php for editing.
 
 You will need to change the values for the following:
 <ol>
-<ul>i</ul>
+<ul>Client ID</ul>
+<ul>Client Secret</ul>
+<ul>Callback URL</ul>
+<ul>Scope</ul>
 </ol>
+
+<pre>
+// 1.) Enter your Client ID
+var $_clientId = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+
+// 2.) Enter your Client Secret
+var $_clientSecret = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+
+// 3.) Enter your Callback URL
+var $_redirectUri = 'http://your-website.com/callback.php';
+
+// 4.) Add or remove scopes
+var $_scope = array(
+	'stream','email','write_post','follow','messages','export'
+);
+</pre>
 
 Usage:
 --------

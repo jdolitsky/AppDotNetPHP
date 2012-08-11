@@ -10,11 +10,11 @@ The Stream API is currently under development. This library will be rapidly chan
 
 Setup:
 --------
-Open up AppDotNet.php in a text editor.
+Open up AppDotNet.php for editing.
 
-You will need to change the values for the following
+You will need to change the values for the following:
 <li>
-<ul>i</ul>
+<ol>i</ol>
 </li>
 
 Usage:

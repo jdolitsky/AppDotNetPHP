@@ -17,6 +17,7 @@ Examples of usage can be found in the examples directory
 
 Here is a simple example of sign-in and data retieval:
 <pre>
+<?php
 require_once 'AppDotNet.php';
 
 $app = new AppDotNet();

@@ -10,7 +10,7 @@ The Stream API is currently under development. This library will be rapidly chan
 
 Usage:
 --------
-Examples of how to use the library can be found in <b>index.php</b>, <b>callback.php</b>, and <b>signout.php</b>
+Good examples of how to use the library can be found in <b>index.php</b>, <b>callback.php</b>, and <b>signout.php</b>
 
 Here is a simple example of sign-in and data retieval:
 <pre>

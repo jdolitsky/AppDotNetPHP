@@ -26,13 +26,13 @@ session_start();
 class AppDotNet {
 
 	// 1.) Enter your Client ID
-	var $_clientId = 'HNRLnJMATwurXxCXQDzkWTHwQqW4NqcP';
+	var $_clientId = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
 	// 2.) Enter your Client Secret
-	var $_clientSecret = 'LQpUZDRvaZxXxyyknhnmPNzcVXJTSLsa';
+	var $_clientSecret = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
 	// 3.) Enter your Callback URL
-	var $_redirectUri = 'http://btown.does-it.net/callback.php';
+	var $_redirectUri = 'http://your-website.com/callback.php';
 	
 	// 4.) Add or remove scopes
 	var $_scope = array(

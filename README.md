@@ -25,27 +25,15 @@ $app = new AppDotNet();
 // check that the user is signed in
 if ($app->getSession()) {
 
-        // get the current user as JSON
+	// get the current user as JSON
 	$data = $app->getUser();
 
-	// accessing the user's name
-	echo 'Welcome '.$data['name'];
+	// accessing the user's username
+	echo 'Welcome '.$data['username'];
 
-// otherwise prompt to sign in
+// if not, redirect to sign in
 } else {
-
 	$url = $app->getAuthUrl();
-	echo '\<a href="'.$url.'"><h2>Sign in using App.net</h2></a>';
-
+	header('Loacation: '.$url);
 }
-
-require ('AppDotNet.php');
-
-$app = new AppDotNet();
-
-// Retrieve a Stream of all public Posts on App.net
-$result = $app->getPublicPosts();
-
-$code = $result['code'];
-$response = $result['res'];
 </pre>

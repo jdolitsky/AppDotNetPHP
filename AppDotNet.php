@@ -17,43 +17,117 @@
 |
 */
 
+// comment these two lines out in production
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+session_start();
+
 class AppDotNet {
 
-	var $_baseUrl = 'https://api.app.net/stream/0/';
+	// 1.) Enter your Client ID
+	var $_clientId = 'HNRLnJMATwurXxCXQDzkWTHwQqW4NqcP';
+
+	// 2.) Enter your Client Secret
+	var $_clientSecret = 'LQpUZDRvaZxXxyyknhnmPNzcVXJTSLsa';
+
+	// 3.) Enter your Callback URL
+	var $_redirectUri = 'http://btown.does-it.net/callback.php';
+	
+	// 4.) Add or remove scopes
+	var $_scope = array(
+		'stream','email','write_post','follow','messages','export'
+	);
+
+	var $_baseUrl = 'https://alpha-api.app.net/stream/0/';
+	var $_authUrl = 'https://alpha.app.net/oauth/';
+
+	var $_authSignInUrl;
+	var $_authPostParams=array();
+
+	// constructor
+	function AppDotNet() {
+
+		$this->_scope = implode('+',$this->_scope);
+
+		$this->_authSignInUrl = $this->_authUrl.'authenticate?client_id='.$this->_clientId
+				        .'&response_type=code&redirect_uri='.$this->_redirectUri
+				        .'&scope='.$this->_scope;
+
+
+		$this->_authPostParams = array('client_id'=>$this->_clientId,
+						'client_secret'=>$this->_clientSecret,
+		      				'grant_type'=>'authorization_code',
+						'redirect_uri'=>$this->_redirectUri);
+	}
+
+	// returns the authentication URL constructed above
+	function getAuthUrl() {
+		return $this->_authSignInUrl;
+	}
+
+	// returns the authentication URL constructed above
+	function setSession() {
+		if (isset($_GET['code'])) {
+			$code = $_GET['code'];
+			$this->_authPostParams['code']=$code;
+			$res = $this->httpPost($this->_authUrl.'access_token', $this->_authPostParams);
+			$access_token = $res['access_token'];
+			$_SESSION['AppDotNetPHPAccessToken']=$access_token;
+			return $access_token;
+		}
+		return false;
+	}
+
+	// check if user is logged in
+	function getSession() {
+		if (isset($_SESSION['AppDotNetPHPAccessToken'])) {
+			return $_SESSION['AppDotNetPHPAccessToken'];
+		} else {
+			return false;
+		}
+	}
+
+	// log the user out
+	function deleteSession() {
+		session_unset();
+		return false;
+	}
 
 	// function to handle all POST requests
 	function httpPost($req, $params) {
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, true);
-		curl_setopt($ch, CURLOPT_HEADER, true);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		$qs = http_build_query($params);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
 		$response = curl_exec($ch); 
 		curl_close($ch);
-		$headers = array();  
-		preg_match('/\d\d\d/', $response, $headers);
-		$code = $headers[0];
-		$obj = json_decode($response);
-		return array('code'=>$code, 'res'=>$obj);
+		$response = json_decode($response,true);
+		if (isset($response['error'])) {
+			exit('AppDotNetPHP<br>Error accessing: <br>'.$req.'<br>Error code: '.$response['error']['code']);
+		} else {
+			return $response;
+		}
 	}
+
 
 	// function to handle all GET requests
 	function httpGet($req) {
+		$orig = $req;
+		$req = $req.'?access_token='.$_SESSION['AppDotNetPHPAccessToken'];
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, false);
-		curl_setopt($ch, CURLOPT_HEADER, true);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		$response = curl_exec($ch); 
 		curl_close($ch);
-		$headers = array();  
-		preg_match('/\d\d\d/', $response, $headers);
-		$code = $headers[0];
-		$obj = json_decode($response);
-		return array('code'=>$code, 'res'=>$obj);
+		$response = json_decode($response,true);
+		if (isset($response['error'])) {
+			exit('AppDotNetPHP<br>Error accessing: <br>'.$orig.'<br>Error code: '.$response['error']['code']);
+		} else {
+			return $response;
+		}
+		
 	}
 
 	// function to handle all DELETE requests
@@ -61,17 +135,17 @@ class AppDotNet {
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, true);
 		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
-		curl_setopt($ch, CURLOPT_HEADER, true);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		$qs = http_build_query($params);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
 		$response = curl_exec($ch); 
 		curl_close($ch);
-		$headers = array();  
-		preg_match('/\d\d\d/', $response, $headers);
-		$code = $headers[0];
-		$obj = json_decode($response);
-		return array('code'=>$code, 'res'=>$obj);
+		$response = json_decode($response,true);
+		if (isset($response['error'])) {
+			exit('AppDotNetPHP<br>Error accessing: <br>'.$req.'<br>Error code: '.$response['error']['code']);
+		} else {
+			return $response;
+		}
 	}
 
 	// Return the Filters for the current user.

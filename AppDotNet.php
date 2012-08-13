@@ -89,11 +89,16 @@ class AppDotNet {
 	}
 
 	// function to handle all POST requests
-	function httpPost($req, $params) {
+	function httpPost($req, $params=array()) {
+		$p = $params;
+		$access_token = $this->getSession();
+		if ($access_token) {
+			$p['access_token'] = $access_token;
+		}
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, true);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		$qs = http_build_query($params);
+		$qs = http_build_query($p);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
 		$response = curl_exec($ch); 
 		curl_close($ch);

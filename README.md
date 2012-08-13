@@ -5,7 +5,9 @@ PHP library for the App.net Stream API
 
 More info on the App.net Stream API here: https://github.com/appdotnet/api-spec
 
-Find me on App.net here: https://alpha.app.net/jdolitsky
+Find more App.net code libraries and examples here https://github.com/appdotnet/api-spec/wiki/Directory-of-third-party-devs-and-apps
+
+Find me on App.net <a href="https://alpha.app.net/jdolitsky">here</a>
 
 NOTE:<br>
 The Stream API is currently under development. This library will be rapidly changing in accordance with changes made in the API.

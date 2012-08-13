@@ -90,15 +90,14 @@ class AppDotNet {
 
 	// function to handle all POST requests
 	function httpPost($req, $params=array()) {
-		$p = $params;
-		$access_token = $this->getSession();
-		if ($access_token) {
-			$p['access_token'] = $access_token;
-		}
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, true);
+		$access_token = $this->getSession();
+		if ($access_token) {
+			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$access_token));
+		}
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		$qs = http_build_query($p);
+		$qs = http_build_query($params);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
 		$response = curl_exec($ch); 
 		curl_close($ch);
@@ -110,19 +109,20 @@ class AppDotNet {
 		}
 	}
 
-
 	// function to handle all GET requests
 	function httpGet($req) {
-		$orig = $req;
-		$req = $req.'?access_token='.$_SESSION['AppDotNetPHPAccessToken'];
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, false);
+		$access_token = $this->getSession();
+		if ($access_token) {
+			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$access_token));
+		}
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		$response = curl_exec($ch); 
 		curl_close($ch);
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {
-			exit('AppDotNetPHP<br>Error accessing: <br>'.$orig.'<br>Error code: '.$response['error']['code']);
+			exit('AppDotNetPHP<br>Error accessing: <br>'.$req.'<br>Error code: '.$response['error']['code']);
 		} else {
 			return $response;
 		}
@@ -134,6 +134,10 @@ class AppDotNet {
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, true);
 		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+		$access_token = $this->getSession();
+		if ($access_token) {
+			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$access_token));
+		}
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		$qs = http_build_query($params);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);

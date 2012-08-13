@@ -22,6 +22,9 @@ $app = new AppDotNet();
 // check that the user is signed in
 if ($app->getSession()) {
 
+	// post on behalf of the user
+	$app->createPost('Hello world');
+
 	// get the current user as JSON
 	$data = $app->getUser();
 

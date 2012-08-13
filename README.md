@@ -1,7 +1,7 @@
 AppDotNetPHP
 ============
 
-<b>PHP library for the App.net Stream API</b>
+PHP library for the App.net Stream API
 
 More info on the App.net Stream API <a target="_blank" href="https://github.com/appdotnet/api-spec">here</a>
 

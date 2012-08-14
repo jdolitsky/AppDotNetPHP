@@ -227,7 +227,6 @@ class AppDotNet {
 
 	}
 
-
 	// Get the most recent Posts mentioning by a specific User in reverse 
 	// chronological order.
 	function getUserMentions($user_id='me') {
@@ -248,6 +247,41 @@ class AppDotNet {
 	function getUser($user_id='me') {
 
 		return $this->httpGet($this->_baseUrl.'users/'.$user_id);
+
+	}
+
+	// Returns the User object of the user being followed.
+	function followUser($user_id=null) {
+
+		return $this->httpPost($this->_baseUrl.'users/'.$user_id.'/follow');
+
+	}
+
+	// Returns the User object of the user being unfollowed.
+	function unfollowUser($user_id=null) {
+
+		return $this->httpDelete($this->_baseUrl.'users/'.$user_id.'/follow');
+
+	}
+
+	// Returns an array of User objects the specified user is following.
+	function getFollowing($user_id='me') {
+
+		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/following');
+
+	}
+
+	// Returns an array of User objects for users following the specified user.
+	function getFollowers($user_id='me') {
+
+		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/followers');
+
+	}
+
+	// Return the 20 most recent Posts for a specific hashtag.
+	function searchHashtags($hashtag=null) {
+
+		return $this->httpGet($this->_baseUrl.'posts/tag/'.$hashtag);
 
 	}
 

@@ -17,8 +17,7 @@ Usage:
 Good examples of how to use the library can be found in <b>index.php</b>, <b>callback.php</b>, and <b>signout.php</b>
 
 Here is a simple example of signing in, posting, and data retrieval:
-<pre>
-<code>
+```php
 require_once 'AppDotNet.php';
 
 $app = new AppDotNet();
@@ -42,8 +41,8 @@ if ($app->getSession()) {
 	header('Location: '.$url);
 	
 }
-</code>
-</pre>
+
+```
 
 Setup:
 --------

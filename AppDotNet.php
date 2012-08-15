@@ -131,20 +131,13 @@ class AppDotNet {
 
 	// function to handle all DELETE requests
 	function httpDelete($req) {
-		$ch = curl_init($req); 
 		$access_token = $this->getSession();
 		if ($access_token) {
-			curl_setopt($ch,CURLOPT_HTTPHEADER,array('X-HTTP-Method-Override: DELETE',
-				                            'Authorization: Bearer '.$access_token));
-		}
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		$response = curl_exec($ch);
-		curl_close($ch);
-		$response = json_decode($response,true);
-		if (isset($response['error'])) {
-			exit('AppDotNetPHP<br>Error accessing: <br>'.$req.'<br>Error code: '.$response['error']['code']);
+			$r = exec('curl --request DELETE --header "Authorization: Bearer '
+					.$access_token.'" "'.$req.'"');
+			return true;
 		} else {
-			return $response;
+			return false;
 		}
 	}
 

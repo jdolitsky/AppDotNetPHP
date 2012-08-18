@@ -17,6 +17,8 @@ ini_set('display_errors', 1);
 
 session_start();
 
+class AppDotNetException extends Exception {}
+
 class AppDotNet {
 
 	// 1.) Enter your Client ID
@@ -38,6 +40,10 @@ class AppDotNet {
 
 	var $_authSignInUrl;
 	var $_authPostParams=array();
+
+	var $rateLimit = null;
+	var $rateLimitRemaining = null;
+	var $rateLimitReset = null;
 
 	// constructor
 	function AppDotNet() {
@@ -88,6 +94,42 @@ class AppDotNet {
 		return false;
 	}
 
+	function parseHeaders($response) {
+		// take out the headers
+		// set internal variables
+		// return the body/content
+		$this->rateLimit = null;
+		$this->rateLimitRemaining = null;
+		$this->rateLimitReset = null;
+
+		list($headers,$content) = explode("\r\n\r\n",$response,2);
+
+		// this is not a good way to parse http headers
+		// it will not (for example) take into account multiline headers
+		// but what we're looking for is pretty basic, so we can ignore those shortcomings
+		$headers = explode("\r\n",$headers);
+		foreach ($headers as $header) {
+			$header = explode(': ',$header,2);
+			if (count($header)<2) {
+				continue;
+			}
+			list($k,$v) = $header;
+			switch ($k) {
+				case 'X-RateLimit-Remaining':
+					$this->rateLimitRemaining = $v;
+					break;
+				case 'X-RateLimit-Limit':
+					$this->rateLimit = $v;
+					break;
+				case 'X-RateLimit-Reset':
+					$this->rateLimitReset = $v;
+					break;
+
+			}
+		}
+		return $content;
+	}
+
 	// function to handle all POST requests
 	function httpPost($req, $params=array()) {
 		$ch = curl_init($req); 
@@ -97,13 +139,15 @@ class AppDotNet {
 			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$access_token));
 		}
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_HEADER, true);
 		$qs = http_build_query($params);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
 		$response = curl_exec($ch); 
 		curl_close($ch);
+		$response = $this->parseHeaders($response);
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {
-			exit('AppDotNetPHP<br>Error accessing: <br>'.$req.'<br>Error code: '.$response['error']['code']);
+			throw new AppDotNetException('Error accessing: '.$req,$response['error']['code']);
 		} else {
 			return $response;
 		}
@@ -118,11 +162,13 @@ class AppDotNet {
 			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$access_token));
 		}
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_HEADER, true);
 		$response = curl_exec($ch); 
 		curl_close($ch);
+		$response = $this->parseHeaders($response);
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {
-			exit('AppDotNetPHP<br>Error accessing: <br>'.$req.'<br>Error code: '.$response['error']['code']);
+			throw new AppDotNetException('Error accessing: '.$orig,$response['error']['code']);
 		} else {
 			return $response;
 		}
@@ -130,14 +176,26 @@ class AppDotNet {
 	}
 
 	// function to handle all DELETE requests
-	function httpDelete($req) {
+	function httpDelete($req, $params=array()) {
+		$ch = curl_init($req); 
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
 		$access_token = $this->getSession();
 		if ($access_token) {
-			$r = exec('curl --request DELETE --header "Authorization: Bearer '
-					.$access_token.'" "'.$req.'"');
-			return true;
+			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$access_token));
+		}
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_HEADER, true);
+		$qs = http_build_query($params);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
+		$response = curl_exec($ch); 
+		curl_close($ch);
+		$response = $this->parseHeaders($response);
+		$response = json_decode($response,true);
+		if (isset($response['error'])) {
+			throw new AppDotNetException('Error accessing: '.$req,$response['error']['code']);
 		} else {
-			return false;
+			return $response;
 		}
 	}
 

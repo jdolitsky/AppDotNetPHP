@@ -228,8 +228,8 @@ class AppDotNet {
 	// Return the 20 most recent Posts from the current User and 
 	// the Users they follow.
 	function getUserStream($user_id='me') {
-		return $this->httpGet($this->_baseUrl.'posts/stream/global');
-		//return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/stream');
+		//return $this->httpGet($this->_baseUrl.'posts/stream/global');
+		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/stream');
 
 	}
 

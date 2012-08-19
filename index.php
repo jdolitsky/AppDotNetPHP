@@ -1,8 +1,11 @@
 <?php
 
+// testing
+require_once('settings.php');
+
 require_once 'AppDotNet.php';
 
-$app = new AppDotNet();
+$app = new AppDotNet($clientId,$clientSecret,$redirect);
 
 // check that the user is signed in
 if ($app->getSession()) {
@@ -27,6 +30,38 @@ if ($app->getSession()) {
 		print "<hr />";
 		print "<h3>Testing ADN functionality</h3>";
 		print '<pre>';
+		print '<b>Your access token is: </b>'.htmlspecialchars($app->getAccessToken())."\n";
+		$token = $app->getAccessToken();
+		print "<b>Clearing access token</b>\n";
+		$app->setAccessToken(null);
+		print "<b>Checking that we can no longer access app.net's API...</b>";
+		print '<blockquote>';
+		try {
+			$denied = $app->getUser();
+			print " error - we were granted access without a token?!?\n";
+			exit;
+		}
+		catch (AppDotNetException $e) {
+			if ($e->getCode()==401) {
+				print " success (could not get access)\n";
+			}
+			else {
+				throw $e;
+			}
+		}
+		print '</blockquote>';
+		print "<b>Resetting access token</b>\n";
+		$app->setAccessToken($token);
+		print "<b>Attempting access again (this should work this time)...</b>";
+		print '<blockquote>';
+		$allowed = $app->getUser();
+		if (!$allowed || !isset($allowed['name']) || $allowed['name']!=$data['name']) {
+			print " error getting access again\n";
+			var_dump($allowed);
+			exit;
+		}
+		print "Success! We were granted access\n";
+		print '</blockquote>';
 		print "<b>Attempting to post a test message to app.net...</b>\n";
 		print "<blockquote>";
 		$sampleText = "Testing posting to app.net using AppDotNetPHP - ".uniqid(mt_rand(0,100000));

@@ -12,9 +12,9 @@ Find me on App.net <a target="_blank" href="https://alpha.app.net/jdolitsky">her
 NOTE:<br>
 The Stream API is currently under development. This library will be rapidly changing in accordance with changes made in the API.
 
-Contributors:
-* @ravisorg
-* @wpstudio
+**Contributors:**
+* <a href="https://github.com/ravisorg">@ravisorg</a>
+* <a href="https://github.com/wpstudio">@wpstudio</a>
 
 Usage:
 --------

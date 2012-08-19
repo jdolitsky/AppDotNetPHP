@@ -13,8 +13,8 @@ NOTE:<br>
 The Stream API is currently under development. This library will be rapidly changing in accordance with changes made in the API.
 
 **Contributors:**
-* <a href="https://github.com/ravisorg">@ravisorg</a>
-* <a href="https://github.com/wpstudio">@wpstudio</a>
+* <a href="https://github.com/ravisorg" target="_blank">@ravisorg</a>
+* <a href="https://github.com/wpstudio" target="_blank">@wpstudio</a>
 
 Usage:
 --------

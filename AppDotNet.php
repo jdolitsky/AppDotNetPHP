@@ -22,12 +22,21 @@ class AppDotNetException extends Exception {}
 class AppDotNet {
 
 	// 1.) Enter your Client ID
+	// The new preferred way of doing this is to send this as the first 
+	// parameter when constructing your AppDotNet object. 
+	// ie: $app = new AppDotNet($clientId,$clientSecret,$redirectUri);
 	var $_clientId = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
 	// 2.) Enter your Client Secret
+	// The new preferred way of doing this is to send this as the second
+	// parameter when constructing your AppDotNet object. 
+	// ie: $app = new AppDotNet($clientId,$clientSecret,$redirectUri);
 	var $_clientSecret = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
 	// 3.) Enter your Callback URL
+	// The new preferred way of doing this is to send this as the third 
+	// parameter when constructing your AppDotNet object. 
+	// ie: $app = new AppDotNet($clientId,$clientSecret,$redirectUri);
 	var $_redirectUri = 'http://your-website.com/callback.php';
 	
 	// 4.) Add or remove scopes
@@ -41,12 +50,26 @@ class AppDotNet {
 	var $_authSignInUrl;
 	var $_authPostParams=array();
 
-	var $rateLimit = null;
-	var $rateLimitRemaining = null;
-	var $rateLimitReset = null;
+	// stores the access token after login
+	var $_accessToken = null;
+
+	// The total number of requests you're allowed within the alloted time period
+	var $_rateLimit = null;
+
+	// The number of requests you have remaining within the alloted time period
+	var $_rateLimitRemaining = null;
+
+	// The number of seconds remaining in the alloted time period
+	var $_rateLimitReset = null;
 
 	// constructor
-	function AppDotNet() {
+	function AppDotNet($clientId=null,$clientSecret=null,$redirectUri=null) {
+
+		if ($clientId && $clientSecret && $redirectUri) {
+			$this->_clientId = $clientId;
+			$this->_clientSecret = $clientSecret;
+			$this->_redirectUri = $redirectUri;
+		}
 
 		$this->_scope = implode('+',$this->_scope);
 
@@ -72,26 +95,54 @@ class AppDotNet {
 			$code = $_GET['code'];
 			$this->_authPostParams['code']=$code;
 			$res = $this->httpPost($this->_authUrl.'access_token', $this->_authPostParams);
-			$access_token = $res['access_token'];
-			$_SESSION['AppDotNetPHPAccessToken']=$access_token;
-			return $access_token;
+			$this->_accessToken = $res['access_token'];
+			$_SESSION['AppDotNetPHPAccessToken']=$this->_accessToken;
+			return $this->_accessToken;
 		}
 		return false;
 	}
 
 	// check if user is logged in
 	function getSession() {
+		// else check the session for the token (from a previous page load)
 		if (isset($_SESSION['AppDotNetPHPAccessToken'])) {
+			$this->_accessToken = $_SESSION['AppDotNetPHPAccessToken'];
 			return $_SESSION['AppDotNetPHPAccessToken'];
-		} else {
-			return false;
-		}
+		} 
+		return false;
 	}
 
 	// log the user out
 	function deleteSession() {
-		session_unset();
+		unset($_SESSION['AppDotNetPHPAccessToken']);
+		$this->_accessToken = null;
 		return false;
+	}
+
+	// return the access token (eg: for offline storage)
+	function getAccessToken() {
+		return $this->_accessToken;
+	}
+
+	// set the access token (eg: after retrieving it from offline storage)
+	function setAccessToken($token) {
+		$this->_accessToken = $token;
+	}
+
+	// The total number of requests you're allowed within the alloted time period
+	function getRateLimit() {
+		return $this->_rateLimit;
+	}
+
+	// The number of requests you have remaining within the alloted time period
+	function getRateLimitRemaining() {
+		return $_rateLimitRemaining;
+	}
+
+	// The number of seconds remaining in the alloted time period
+	// When this time is up you'll have getRateLimit() available again
+	function getRateLimitReset() {
+		return $_rateLimitReset;
 	}
 
 	function parseHeaders($response) {
@@ -120,7 +171,7 @@ class AppDotNet {
 					break;
 				case 'X-RateLimit-Limit':
 					$this->rateLimit = $v;
-					break;
+					break; 
 				case 'X-RateLimit-Reset':
 					$this->rateLimitReset = $v;
 					break;
@@ -134,9 +185,8 @@ class AppDotNet {
 	function httpPost($req, $params=array()) {
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, true);
-		$access_token = $this->getSession();
-		if ($access_token) {
-			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$access_token));
+		if ($this->_accessToken) {
+			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$this->_accessToken));
 		}
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);
@@ -147,7 +197,12 @@ class AppDotNet {
 		$response = $this->parseHeaders($response);
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {
-			throw new AppDotNetException('Error accessing: '.$req,$response['error']['code']);
+			if (is_array($response['error'])) {
+				throw new AppDotNetException($response['error']['message'],$response['error']['code']);
+			}
+			else {
+				throw new AppDotNetException($response['error']);
+			}
 		} else {
 			return $response;
 		}
@@ -157,9 +212,8 @@ class AppDotNet {
 	function httpGet($req) {
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, false);
-		$access_token = $this->getSession();
-		if ($access_token) {
-			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$access_token));
+		if ($this->_accessToken) {
+			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$this->_accessToken));
 		}
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);
@@ -168,7 +222,12 @@ class AppDotNet {
 		$response = $this->parseHeaders($response);
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {
-			throw new AppDotNetException('Error accessing: '.$orig,$response['error']['code']);
+			if (is_array($response['error'])) {
+				throw new AppDotNetException($response['error']['message'],$response['error']['code']);
+			}
+			else {
+				throw new AppDotNetException($response['error']);
+			}
 		} else {
 			return $response;
 		}
@@ -180,9 +239,8 @@ class AppDotNet {
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, true);
 		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
-		$access_token = $this->getSession();
-		if ($access_token) {
-			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$access_token));
+		if ($this->_accessToken) {
+			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$this->_accessToken));
 		}
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);
@@ -193,7 +251,12 @@ class AppDotNet {
 		$response = $this->parseHeaders($response);
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {
-			throw new AppDotNetException('Error accessing: '.$req,$response['error']['code']);
+			if (is_array($response['error'])) {
+				throw new AppDotNetException($response['error']['message'],$response['error']['code']);
+			}
+			else {
+				throw new AppDotNetException($response['error']);
+			}
 		} else {
 			return $response;
 		}

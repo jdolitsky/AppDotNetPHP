@@ -12,6 +12,10 @@ Find me on App.net <a target="_blank" href="https://alpha.app.net/jdolitsky">her
 NOTE:<br>
 The Stream API is currently under development. This library will be rapidly changing in accordance with changes made in the API.
 
+**Contributors:**
+* <a href="https://github.com/ravisorg" target="_blank">@ravisorg</a>
+* <a href="https://github.com/wpstudio" target="_blank">@wpstudio</a>
+
 Usage:
 --------
 Good examples of how to use the library can be found in <b>index.php</b>, <b>callback.php</b>, and <b>signout.php</b>
@@ -51,7 +55,7 @@ Setup:
 --------
 Open up <b>AppDotNet.php</b> for editing
 
-You will need to change the values for the following between lines 22-34:
+You will need to change the values for the following between lines 24-36:
 <ol>
 <ul>Client ID</ul>
 <ul>Client Secret</ul>

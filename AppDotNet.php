@@ -404,6 +404,14 @@ class AppDotNet {
 	
 	}
 	
+	// Retrieve a personalized Stream for the specified users. This endpoint is similar
+	// to the 'Retrieve a User's personalized stream' endpoint.
+	function getUsersRealTimeStream($user_ids=null,$count=20,$before_id=null,$since_id=null) {
+		$str = json_encode($user_ids);
+		return $this->httpGet($this->_baseUrl.'streams/app?user_ids='.$str.'&count='
+				.$count.'&before_id='.$before_id.'&since_id='.$since_id);
+	}
+	
 	// Retrieve a Stream of all public Posts on App.net.
 	function getPublicPosts($count=20,$before_id=null,$since_id=null) {
 		return $this->httpGet($this->_baseUrl.'posts/stream/global?count='

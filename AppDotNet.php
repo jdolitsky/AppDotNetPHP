@@ -491,13 +491,12 @@ class AppDotNet {
 	 	return $this->httpPost($this->_baseUrl.'users/'.$user_id.'/mute');
 	}   
 	
-	//Unmute user
+	// Unmute user
 	function unmuteUser($user_id=null) {
 		return $this->httpDelete($this->_baseUrl.'users/'.$user_id.'/mute');
 	}       
 	
-	//List Muted
-	// Returns an array of User objects for users following the specified user.
+	// List the users muted by the current user
 	function getMuted($user_id='me',$count=20,$before_id=null,$since_id=null) {
 		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/muted?count='
 					.$count.'&before_id='.$before_id.'&since_id='.$since_id);

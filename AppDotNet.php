@@ -324,34 +324,37 @@ class AppDotNet {
 	}
 
 	// Retrieve the Posts that are 'in reply to' a specific Post.
-	function getPostReplies($post_id=null) {
-
-		return $this->httpGet($this->_baseUrl.'posts/'.$post_id.'/replies');
-
+	function getPostReplies($post_id=null,$count=20,$before_id=null,$since_id=null) {
+	
+		return $this->httpGet($this->_baseUrl.'posts/'.$post_id.'/replies?count='
+					.$count.'&before_id='.$before_id.'&since_id='.$since_id);
+	
 	}
-
+	
 	// Get the most recent Posts created by a specific User in reverse 
 	// chronological order.
-	function getUserPosts($user_id='me') {
-
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/posts');
-
+	function getUserPosts($user_id='me',$count=20,$before_id=null,$since_id=null) {
+	
+		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/posts?count='
+					.$count.'&before_id='.$before_id.'&since_id='.$since_id);
+	
 	}
-
+	
 	// Get the most recent Posts mentioning by a specific User in reverse 
 	// chronological order.
-	function getUserMentions($user_id='me') {
-
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/mentions');
-
+	function getUserMentions($user_id='me',$count=20,$before_id=null,$since_id=null) {
+	
+		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/mentions?count='
+					.$count.'&before_id='.$before_id.'&since_id='.$since_id);
+	
 	}
 
 	// Return the 20 most recent Posts from the current User and 
 	// the Users they follow.
-	function getUserStream($user_id='me') {
-		//return $this->httpGet($this->_baseUrl.'posts/stream/global');
-		//return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/stream');
-		return $this->httpGet($this->_baseUrl.'posts/stream');
+	function getUserStream($user_id='me',$count=20,$before_id=null,$since_id=null) {
+		return $this->httpGet($this->_baseUrl.'posts/stream/global?count='
+					.$count.'&before_id='.$before_id.'&since_id='.$since_id);
+	
 	}
 
 	// Returns a specific User object.
@@ -376,48 +379,43 @@ class AppDotNet {
 	}
 
 	// Returns an array of User objects the specified user is following.
-	function getFollowing($user_id='me') {
-
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/following');
-
+	function getFollowing($user_id='me',$count=20,$before_id=null,$since_id=null) {
+		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/following?count='
+					.$count.'&before_id='.$before_id.'&since_id='.$since_id);
 	}
-
+	
 	// Returns an array of User objects for users following the specified user.
-	function getFollowers($user_id='me') {
-
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/followers');
-
+	function getFollowers($user_id='me',$count=20,$before_id=null,$since_id=null) {
+		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/followers?count='
+					.$count.'&before_id='.$before_id.'&since_id='.$since_id);
 	}
-
+	
 	// Return the 20 most recent Posts for a specific hashtag.
-	function searchHashtags($hashtag=null) {
-
-		return $this->httpGet($this->_baseUrl.'posts/tag/'.$hashtag);
-
+	function searchHashtags($hashtag=null,$count=20,$before_id=null,$since_id=null) {
+		return $this->httpGet($this->_baseUrl.'posts/tag/'.$hashtag.'?count='
+					.$count.'&before_id='.$before_id.'&since_id='.$since_id);
 	}
-
+	
 	// Retrieve a personalized Stream for the current authorized User. This endpoint 
 	// is similar to the 'Retrieve a User's personalized stream' endpoint.
-	function getUserRealTimeStream() {
-		return $this->httpGet($this->_baseUrl.'posts/stream/global');
-		//return $this->httpGet($this->_baseUrl.'streams/user');
-
+	function getUserRealTimeStream($count=20,$before_id=null,$since_id=null) {
+		return $this->httpGet($this->_baseUrl.'posts/stream?count='.$count
+			.'&before_id='.$before_id.'&since_id='.$since_id);
+	
 	}
-
-	// Retrieve a personalized Stream for the specified users. This endpoint is similar 
+	
+	// Retrieve a personalized Stream for the specified users. This endpoint is similar
 	// to the 'Retrieve a User's personalized stream' endpoint.
-	function getUsersRealTimeStream($user_ids=null) {
-
+	function getUsersRealTimeStream($user_ids=null,$count=20,$before_id=null,$since_id=null) {
 		$str = json_encode($user_ids);
-		return $this->httpGet($this->_baseUrl.'streams/app?user_ids='.$str);
-
+		return $this->httpGet($this->_baseUrl.'streams/app?user_ids='.$str.'&count='
+				.$count.'&before_id='.$before_id.'&since_id='.$since_id);
 	}
-
+	
 	// Retrieve a Stream of all public Posts on App.net.
-	function getPublicPosts() {
-		return $this->httpGet($this->_baseUrl.'posts/stream/global');
-		//return $this->httpGet($this->_baseUrl.'streams/public');
-
+	function getPublicPosts($count=20,$before_id=null,$since_id=null) {
+		return $this->httpGet($this->_baseUrl.'posts/stream/global?count='
+					.$count.'&before_id='.$before_id.'&since_id='.$since_id);
 	}
 
 	// Retrieve the current status for a specific Stream

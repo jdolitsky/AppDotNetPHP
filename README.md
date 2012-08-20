@@ -20,7 +20,7 @@ The Stream API is currently under development. This library will be rapidly chan
 
 Usage:
 --------
-Good examples of how to use the library can be found in <b>index.php</b>, <b>callback.php</b>, and <b>signout.php</b>
+Good examples of how to use the library can be found in <b>index.php</b>, <b>callback.php</b>, <b>signout.php, and remember_me.php files. Make sure you update your client id/secret in settings.php before starting.</b>
 
 Here is a simple example of signing in, posting, and data retrieval:
 ```php
@@ -28,7 +28,7 @@ Here is a simple example of signing in, posting, and data retrieval:
 
 require_once 'AppDotNet.php';
 
-$app = new AppDotNet();
+$app = new AppDotNet('client id','client secret','http://callback/url');
 
 // check that the user is signed in
 if ($app->getSession()) {
@@ -52,15 +52,3 @@ if ($app->getSession()) {
 
 ?>
 ```
-
-Setup:
---------
-Open up <b>AppDotNet.php</b> for editing
-
-You will need to change the values for the following between lines 24-36:
-<ol>
-<ul>Client ID</ul>
-<ul>Client Secret</ul>
-<ul>Callback URL</ul>
-<ul>Scope</ul>
-</ol>

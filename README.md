@@ -11,7 +11,7 @@ NOTE:<br>
 The Stream API is currently under development. This library will be rapidly changing in accordance with changes made in the API.
 
 **Contributors:**
-* <a href="https://alpha.app.net/jdolitsky" target="_blank">@jdolitsky</a> (me)
+* <a href="https://alpha.app.net/jdolitsky" target="_blank">@jdolitsky</a>
 * <a href="https://alpha.app.net/ravisorg" target="_blank">@ravisorg</a>
 * <a href="https://github.com/wpstudio" target="_blank">@wpstudio</a>
 * <a href="https://alpha.app.net/hxf148" target="_blank">@hxf148/a>

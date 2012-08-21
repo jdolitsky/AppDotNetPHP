@@ -34,6 +34,7 @@ $clientSecret = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 $redirectUri  = 'http://your-website.com/callback.php';
 $scope        =  array('stream','email','write_post','follow','messages','export');
 
+// construct the AppDotNet object
 $app = new AppDotNet($clientId,$clientSecret,$redirectUri,$scope);
 
 // check that the user is signed in
@@ -61,5 +62,7 @@ if ($app->getSession()) {
 
 You can edit the default values in <b>settings.php</b> in order to construct the object without parameters:
 ```php
+<?php
 $app = new AppDotNet();
+?>
 ```

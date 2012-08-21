@@ -21,57 +21,42 @@ class AppDotNetException extends Exception {}
 
 class AppDotNet {
 
-	// 1.) Enter your Client ID
-	// The new preferred way of doing this is to send this as the first 
-	// parameter when constructing your AppDotNet object. 
-	// ie: $app = new AppDotNet($clientId,$clientSecret,$redirectUri);
-	var $_clientId = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+	private $_baseUrl = 'https://alpha-api.app.net/stream/0/';
+	private $_authUrl = 'https://alpha.app.net/oauth/';
 
-	// 2.) Enter your Client Secret
-	// The new preferred way of doing this is to send this as the second
-	// parameter when constructing your AppDotNet object. 
-	// ie: $app = new AppDotNet($clientId,$clientSecret,$redirectUri);
-	var $_clientSecret = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
-
-	// 3.) Enter your Callback URL
-	// The new preferred way of doing this is to send this as the third 
-	// parameter when constructing your AppDotNet object. 
-	// ie: $app = new AppDotNet($clientId,$clientSecret,$redirectUri);
-	var $_redirectUri = 'http://your-website.com/callback.php';
-	
-	// 4.) Add or remove scopes
-	var $_scope = array(
-		'stream','email','write_post','follow','messages','export'
-	);
-
-	var $_baseUrl = 'https://alpha-api.app.net/stream/0/';
-	var $_authUrl = 'https://alpha.app.net/oauth/';
-
-	var $_authSignInUrl;
-	var $_authPostParams=array();
+	private $_authSignInUrl;
+	private $_authPostParams=array();
 
 	// stores the access token after login
-	var $_accessToken = null;
+	private $_accessToken = null;
 
 	// The total number of requests you're allowed within the alloted time period
-	var $_rateLimit = null;
+	private $_rateLimit = null;
 
 	// The number of requests you have remaining within the alloted time period
-	var $_rateLimitRemaining = null;
+	private $_rateLimitRemaining = null;
 
 	// The number of seconds remaining in the alloted time period
-	var $_rateLimitReset = null;
+	private $_rateLimitReset = null;
 
 	// constructor
-	function AppDotNet($clientId=null,$clientSecret=null,$redirectUri=null) {
+	function __construct($clientId=null,$clientSecret=null,$redirectUri=null,$scope=null) {
 
-		if ($clientId && $clientSecret && $redirectUri) {
+		if ($clientId && $clientSecret && $redirectUri && $scope) {
 			$this->_clientId = $clientId;
 			$this->_clientSecret = $clientSecret;
 			$this->_redirectUri = $redirectUri;
+			$this->_scope = implode('+',$scope);
+		} else {
+			require_once 'settings.php';
+			if ($app_clientId == 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX') {
+				throw new AppDotNetException('You must change the values defined in settings.php');
+			}
+			$this->_clientId = $app_clientId;
+			$this->_clientSecret = $app_clientSecret;
+			$this->_redirectUri = $app_redirectUri;
+			$this->_scope = implode('+',$app_scope);
 		}
-
-		$this->_scope = implode('+',$this->_scope);
 
 		$this->_authSignInUrl = $this->_authUrl.'authenticate?client_id='.$this->_clientId
 				        .'&response_type=code&redirect_uri='.$this->_redirectUri
@@ -90,13 +75,19 @@ class AppDotNet {
 	}
 
 	// user login
-	function setSession() {
+	function setSession($cookie=0) {
 		if (isset($_GET['code'])) {
 			$code = $_GET['code'];
 			$this->_authPostParams['code']=$code;
 			$res = $this->httpPost($this->_authUrl.'access_token', $this->_authPostParams);
 			$this->_accessToken = $res['access_token'];
 			$_SESSION['AppDotNetPHPAccessToken']=$this->_accessToken;
+	
+			if ($cookie==1) {
+				$cookie_lifetime = time()+(60*60*24*7);
+				setcookie('AppDotNetPHPAccessToken',$this->_accessToken,$cookie_lifetime);
+			}			
+
 			return $this->_accessToken;
 		}
 		return false;
@@ -104,17 +95,25 @@ class AppDotNet {
 
 	// check if user is logged in
 	function getSession() {
+		// first check for cookie
+		if (isset($_COOKIE['AppDotNetPHPAccessToken']) && $_COOKIE['AppDotNetPHPAccessToken'] != 'expired') {
+
+			$this->_accessToken = $_COOKIE['AppDotNetPHPAccessToken'];
+			return $_COOKIE['AppDotNetPHPAccessToken'];
+
 		// else check the session for the token (from a previous page load)
-		if (isset($_SESSION['AppDotNetPHPAccessToken'])) {
+		} else if (isset($_SESSION['AppDotNetPHPAccessToken'])) {
+
 			$this->_accessToken = $_SESSION['AppDotNetPHPAccessToken'];
 			return $_SESSION['AppDotNetPHPAccessToken'];
-		} 
+		}
 		return false;
 	}
 
 	// log the user out
 	function deleteSession() {
 		unset($_SESSION['AppDotNetPHPAccessToken']);
+		setcookie('AppDotNetPHPAccessToken', 'expired', time()+360);
 		$this->_accessToken = null;
 		return false;
 	}
@@ -503,4 +502,3 @@ class AppDotNet {
 	}
 
 }
-?>

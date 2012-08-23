@@ -12,7 +12,7 @@ if (isset($_GET['rem'])) {
 }
 
 require_once 'AppDotNet.php';
-$app = new AppDotNet();
+$app = new EZAppDotNet();
 
 // check that the user is signed in
 if ($app->getSession()) {
@@ -24,7 +24,7 @@ if ($app->getSession()) {
 	echo '<body style="background:url('.$data['cover_image']['url'].')">';
 	echo '<div style="background:#fff;opacity:0.8;padding:20px;margin:10px;border-radius:15px;">';
 	echo '<h1>Welcome to <a target="_blank" href="https://github.com/jdolitsky/AppDotNetPHP">';
-	echo 'AppDotNetPHP</a></h1>';
+	echo 'AppDotNetPHP</a> (the EZ version)</h1>';
 
 	// accessing the user's name
 	echo '<h3>'.$data['name'].'</h3>';

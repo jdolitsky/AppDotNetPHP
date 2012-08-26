@@ -1,8 +1,8 @@
 <?php
 
-require_once 'AppDotNet.php';
+require_once '../EZAppDotNet.php';
 
-$app = new AppDotNet();
+$app = new EZAppDotNet();
 
 // log out user
 $app->deleteSession();

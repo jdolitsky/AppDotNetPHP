@@ -20,9 +20,44 @@ The Stream API is currently under development. This library will be rapidly chan
 
 Usage:
 --------
-Good examples of how to use the library can be found in the files <b>index.php</b> <b>callback.php</b> and <b>signout.php</b>
+###EZAppDotNet
+If you are planning to design an app for viewing within a browser that requires a login screen etc, this is a great place to start. This aims to hide all the nasty authentication stuff from the average developer. It is also recommended that you start here if you have never worked with OAuth add/or APIs before.
 
-Here is a simple example of signing in, posting, and data retrieval:
+```php
+<?php
+
+require_once 'EZAppDotNet.php';
+
+$app = new EZAppDotNet();
+
+// check that the user is signed in
+if ($app->getSession()) {
+
+    // post on behalf of the user
+    $app->createPost('Hello world');
+
+    // get the current user as JSON
+    $data = $app->getUser();
+
+    // accessing the user's username
+    echo 'Welcome '.$data['username'];
+
+// if not, redirect to sign in
+} else {
+
+    $url = $app->getAuthUrl();
+    header('Location: '.$url);
+
+}
+
+?>
+```
+To view a full example in action, you should unpack/clone this project into your webroot directory. Edit the values in **EZsettings.php** to reflect the ones for your app (to make things easy, change the Callback URL within your app.net developers console to http://your-website.com/AppDotNetPHP/ez-example/callback.php). Add or remove values from the $app_scope array to change the permissions your app will have with the authenticated user. Travel to http://your-website.com/AppDotNetPHP/ez-example/ and click 'Sign in with App.net'.
+
+###AppDotNet
+Use this class if you need more control of your application (such as running a command line process) or are integrating your code with an existing application that handles sessions/cookies in a different way. 
+
+First construct your authentication url.
 ```php
 <?php
 
@@ -37,32 +72,37 @@ $scope        =  array('stream','email','write_post','follow','messages','export
 // construct the AppDotNet object
 $app = new AppDotNet($clientId,$clientSecret,$redirectUri,$scope);
 
-// check that the user is signed in
-if ($app->getSession()) {
-
-	// post on behalf of the user
-	$app->createPost('Hello world');
-
-	// get the current user as JSON
-	$data = $app->getUser();
-
-	// accessing the user's username
-	echo 'Welcome '.$data['username'];
-
-// if not, redirect to sign in
-} else {
-
-	$url = $app->getAuthUrl();
-	header('Location: '.$url);
-	
-}
+// create an authentication Url
+$url = $app->getAuthUrl();
 
 ?>
 ```
-
-You can edit the default values in <b>settings.php</b> in order to construct the object without parameters:
+Once the user has authenticated the app, grab the token in the callback script, and get information about the user.
 ```php
 <?php
-$app = new AppDotNet();
+require_once 'AppDotNet.php';
+$app = new AppDotNet($clientId,$clientSecret,$redirectUri,$scope);
+
+// get the token returned by App.net
+// (this also sets the token)
+$token = $app->getAccessToken();
+
+// get info about the user
+$user = $app->getUser();
+
+// get the unique user id
+$userId = $user['id'];
+
+?>
+```
+Save the token and user id in a database or elsewhere, then make API calls in future scripts after setting the token.
+```php
+<?php
+
+$app->setAccessToken($token);
+
+// post on behalf of the user w/ that token
+$app->createPost('Hello world');
+
 ?>
 ```

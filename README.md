@@ -21,7 +21,7 @@ The Stream API is currently under development. This library will be rapidly chan
 Usage:
 --------
 ###EZAppDotNet
-If you are planning to design an app for viewing within a browser that requires a login screen etc, this is a great place to start. This aims to hide all the nasty authentication stuff from the average developer. It is also recommended that you start here if you have never worked with OAuth add/or APIs before.
+If you are planning to design an app for viewing within a browser that requires a login screen etc, this is a great place to start. This aims to hide all the nasty authentication stuff from the average developer. It is also recommended that you start here if you have never worked with OAuth and/or APIs before.
 
 ```php
 <?php

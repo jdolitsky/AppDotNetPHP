@@ -409,7 +409,7 @@ class AppDotNet {
 		if ($since_id) {
 			$params['since_id'] = $since_id;
 		}
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/followers'.http_build_query($params));
+		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/followers?'.http_build_query($params));
 	}
 	
 	// Return the 20 most recent Posts for a specific hashtag.

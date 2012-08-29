@@ -71,7 +71,7 @@ class AppDotNet {
 		}
 
 		// return the constructed url
-		return $this->_authUrl.'authenticate?'.http_build_query($data);
+		return $this->_authUrl.'authenticate?'.$this->buildQueryString($data);
 	}
 
 	/**
@@ -185,6 +185,23 @@ class AppDotNet {
 		return $content;
 	}
 
+	/** 
+	 * Internal function. Used to turn things like TRUE into 1, and then
+	 * calls http_build_query.
+	 */
+	protected function buildQueryString($array) {
+		foreach ($array as $k=>&$v) {
+			if ($v===true) {
+				$v = '1';
+			}
+			elseif ($v===false) {
+				$v = '0';
+			}
+			unset($v);
+		}
+		return http_build_query($array);
+	}
+
 	/**
 	 * Internal function. Handle all POST requests
 	 */
@@ -196,7 +213,7 @@ class AppDotNet {
 		}
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);
-		$qs = http_build_query($params);
+		$qs = $this->buildQueryString($params);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
 		$response = curl_exec($ch); 
 		curl_close($ch);
@@ -254,7 +271,7 @@ class AppDotNet {
 		}
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);
-		$qs = http_build_query($params);
+		$qs = $this->buildQueryString($params);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
 		$response = curl_exec($ch); 
 		curl_close($ch);
@@ -353,7 +370,7 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getPostReplies($post_id=null,$params = array()) {
-		return $this->httpGet($this->_baseUrl.'posts/'.urlencode($post_id).'/replies?'.http_build_query($params));
+		return $this->httpGet($this->_baseUrl.'posts/'.urlencode($post_id).'/replies?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -369,7 +386,7 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserPosts($user_id='me', $params = array()) {
-		return $this->httpGet($this->_baseUrl.'users/'.urlencode($user_id).'/posts?'.http_build_query($params));
+		return $this->httpGet($this->_baseUrl.'users/'.urlencode($user_id).'/posts?'.$this->buildQueryString($params));
 	}
 	
 	/**
@@ -385,7 +402,7 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserMentions($user_id='me',$params = array()) {
-		return $this->httpGet($this->_baseUrl.'users/'.urlencode($user_id).'/mentions?'.http_build_query($params));
+		return $this->httpGet($this->_baseUrl.'users/'.urlencode($user_id).'/mentions?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -398,7 +415,7 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserStream($params = array()) {
-		return $this->httpGet($this->_baseUrl.'posts/stream?'.http_build_query($params));
+		return $this->httpGet($this->_baseUrl.'posts/stream?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -465,7 +482,7 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function searchHashtags($hashtag=null, $params = array()) {
-		return $this->httpGet($this->_baseUrl.'posts/tag/'.urlencode($hashtag).'?'.http_build_query($params));
+		return $this->httpGet($this->_baseUrl.'posts/tag/'.urlencode($hashtag).'?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -478,7 +495,7 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getPublicPosts($params = array()) {
-		return $this->httpGet($this->_baseUrl.'posts/stream/global?'.http_build_query($params));
+		return $this->httpGet($this->_baseUrl.'posts/stream/global?'.$this->buildQueryString($params));
 	}
 
 	/**

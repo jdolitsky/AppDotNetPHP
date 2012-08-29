@@ -18,6 +18,10 @@ The Stream API is currently under development. This library will be rapidly chan
 * <a href="https://github.com/wpstudio" target="_blank">@wpstudio</a>
 * <a href="https://alpha.app.net/hxf148" target="_blank">@hxf148</a>
 
+WARNING:
+---------
+This version breaks a lot of backward compatibility with the previous version, in order to be more flexible with the rapidly evolving API. YOU WILL HAVE TO MAKE CHANGES TO YOUR CODE WHEN YOU UPGRADE.
+
 Usage:
 --------
 ###EZAppDotNet

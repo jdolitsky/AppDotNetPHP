@@ -70,10 +70,10 @@ $redirectUri  = 'http://your-website.com/callback.php';
 $scope        =  array('stream','email','write_post','follow','messages','export');
 
 // construct the AppDotNet object
-$app = new AppDotNet($clientId,$clientSecret,$redirectUri,$scope);
+$app = new AppDotNet($clientId,$clientSecret);
 
 // create an authentication Url
-$url = $app->getAuthUrl();
+$url = $app->getAuthUrl($redirectUri,$scope);
 
 ?>
 ```
@@ -81,7 +81,7 @@ Once the user has authenticated the app, grab the token in the callback script, 
 ```php
 <?php
 require_once 'AppDotNet.php';
-$app = new AppDotNet($clientId,$clientSecret,$redirectUri,$scope);
+$app = new AppDotNet($clientId,$clientSecret);
 
 // get the token returned by App.net
 // (this also sets the token)

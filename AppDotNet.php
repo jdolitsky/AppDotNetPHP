@@ -36,32 +36,38 @@ class AppDotNet {
 	private $_rateLimitReset = null;
 
 	// constructor
-	public function __construct($clientId,$clientSecret,$redirectUri,
-			$scope=array('stream','email','write_post','follow','messages','export')) {
-
+	public function __construct($clientId,$clientSecret) {
 		$this->_clientId = $clientId;
 		$this->_clientSecret = $clientSecret;
-		$this->_redirectUri = $redirectUri;
-		$this->_scope = implode('+',$scope);
 	}
 
 	/**
 	 * Construct the proper Auth URL for the user to visit and either grant
 	 * or not access to your app. Usually you would place this as a link for
 	 * the user to client, or a redirect to send them to the auth URL.
+	 * @param string $callbackUri Where you want the user to be directed
+	 * after authenticating with App.net. This must be one of the URIs
+	 * allowed by your App.net application settings.
+	 * @param array $scope An array of scopes (permissions) you wish to obtain
+	 * from the user. Currently options are stream, email, write_post, follow,
+	 * messages, and export. If you don't specify anything, you'll only receive
+	 * access to the user's basic profile (the default).
 	 */
-	public function getAuthUrl() {
+	public function getAuthUrl($callbackUri,$scope=null) {
 
 		// construct an authorization url based on our client id and other data
 		$data = array(
 			'client_id'=>$this->_clientId,
 			'response_type'=>'code',
-			'redirect_uri'=>$this->_redirectUri,
+			'redirect_uri'=>$callbackUri,
 		);
 
+		if ($scope) {
+			$data['scope'] = implode('+',$scope);
+		}
+
 		// return the constructed url
-		return $this->_authUrl.'authenticate?'
-				.http_build_query($data).'&scope='.$this->_scope;
+		return $this->_authUrl.'authenticate?'.http_build_query($data);
 	}
 
 	/**

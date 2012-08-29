@@ -29,8 +29,8 @@ session_start();
 
 class EZAppDotNet extends AppDotNet {
 
-	public function __construct($clientId=null,$clientSecret=null,$redirectUri=null,$scope=null) {
-		global $app_clientId,$app_clientSecret,$app_redirectUri,$app_scope;
+	public function __construct($clientId=null,$clientSecret=null) {
+		global $app_clientId,$app_clientSecret;
 
 		// if client id wasn't passed, and it's in the settings.php file, use it from there
 		if (!$clientId && isset($app_clientId)) {
@@ -42,12 +42,22 @@ class EZAppDotNet extends AppDotNet {
 
 			$clientId = $app_clientId;
 			$clientSecret = $app_clientSecret;
-			$redirectUri = $app_redirectUri;
-			$scope = $app_scope;
 		}
 
 		// call the parent with the variables we have
 		parent::__construct($clientId,$clientSecret,$redirectUri,$scope);
+	}
+
+	public function getAuthUrl($redirectUri=null,$scope=null) {
+		global $app_redirectUri,$app_scope;
+		
+		if (is_null($redirectUri)) {
+			$redirectUri = $app_redirectUri;
+		}
+		if (is_null($scope)) {
+			$scope = $app_scope;
+		}
+		return parent::getAuthUrl();
 	}
 
 	// user login

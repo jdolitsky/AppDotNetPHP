@@ -23,6 +23,12 @@ class AppDotNet {
 	// stores the access token after login
 	private $_accessToken = null;
 
+	// stores the user ID returned when fetching the auth token
+	private $_user_id = null;
+
+	// stores the username returned when fetching the auth token
+	private $_username = null;
+
 	// The total number of requests you're allowed within the alloted time period
 	private $_rateLimit = null;
 
@@ -31,6 +37,10 @@ class AppDotNet {
 
 	// The number of seconds remaining in the alloted time period
 	private $_rateLimitReset = null;
+
+	// debug info
+	private $_last_request = null;
+	private $_last_response = null;
 
 	/**
 	 * Constructs an AppDotNet PHP object with the specified client ID and 
@@ -66,12 +76,13 @@ class AppDotNet {
 			'redirect_uri'=>$callback_uri,
 		);
 
+		$url = $this->_authUrl.'authenticate?'.$this->buildQueryString($data);
 		if ($scope) {
-			$data['scope'] = implode('+',$scope);
+			$url .= '&scope='.implode('+',$scope);
 		}
 
 		// return the constructed url
-		return $this->_authUrl.'authenticate?'.$this->buildQueryString($data);
+		return $url;
 	}
 
 	/**
@@ -79,7 +90,7 @@ class AppDotNet {
 	 * token. For example, you could store it in a database and use 
 	 * setAccessToken() later on to return on behalf of the user.
 	 */
-	public function getAccessToken() {
+	public function getAccessToken($callback_uri) {
 		// if there's no access token set, and they're returning from 
 		// the auth page with a code, use the code to get a token
 		if (!$this->_accessToken && isset($_GET['code']) && $_GET['code']) {
@@ -89,7 +100,7 @@ class AppDotNet {
 				'client_id'=>$this->_clientId,
 				'client_secret'=>$this->_clientSecret,
 				'grant_type'=>'authorization_code',
-				'redirect_uri'=>$this->_redirectUri,
+				'redirect_uri'=>$callback_uri,
 				'code'=>$_GET['code']
 			);
 
@@ -98,6 +109,8 @@ class AppDotNet {
 
 			// store it for later
 			$this->_accessToken = $res['access_token'];
+			$this->_username = $res['username'];
+			$this->_user_id = $res['user_id'];
 		}
 
 		// return what we have (this may be a token, or it may be nothing)
@@ -150,7 +163,7 @@ class AppDotNet {
 		$this->rateLimitRemaining = null;
 		$this->rateLimitReset = null;
 
-		$response = explode("\r\n",$response,2);
+		$response = explode("\r\n\r\n",$response,2);
 		$headers = $response[0];
 		if (isset($response[1])) {
 			$content = $response[1];
@@ -205,19 +218,26 @@ class AppDotNet {
 	/**
 	 * Internal function. Handle all POST requests
 	 */
-	protected function httpPost($req, $params=array()) {
+	protected function httpPost($req, $params=array(),$contentType='application/x-www-form-urlencoded') {
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, true);
+		$headers = array("Content-Type: ".$contentType);
 		if ($this->_accessToken) {
-			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$this->_accessToken));
+			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
 		}
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLINFO_HEADER_OUT, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);
-		$qs = $this->buildQueryString($params);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
-		$response = curl_exec($ch); 
+		// if they passed an array, build a list of parameters from it
+		if (is_array($params)) {
+			$params = $this->buildQueryString($params);
+		}
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+		$this->_last_response = curl_exec($ch); 
+		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
 		curl_close($ch);
-		$response = $this->parseHeaders($response);
+		$response = $this->parseHeaders($this->_last_response);
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {
 			if (is_array($response['error'])) {
@@ -237,14 +257,18 @@ class AppDotNet {
 	protected function httpGet($req) {
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, false);
+		$headers = array();
 		if ($this->_accessToken) {
-			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$this->_accessToken));
+			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
 		}
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLINFO_HEADER_OUT, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);
-		$response = curl_exec($ch); 
+		$this->_last_response = curl_exec($ch); 
+		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
 		curl_close($ch);
-		$response = $this->parseHeaders($response);
+		$response = $this->parseHeaders($this->_last_response);
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {
 			if (is_array($response['error'])) {
@@ -262,20 +286,27 @@ class AppDotNet {
 	/**
 	 * Internal function. Handles all DELETE requests
 	 */
-	protected function httpDelete($req, $params=array()) {
+	protected function httpDelete($req, $params=array(),$contentType='application/x-www-form-urlencoded') {
 		$ch = curl_init($req); 
 		curl_setopt($ch, CURLOPT_POST, true);
 		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+		$headers = array("Content-Type: ".$contentType);
 		if ($this->_accessToken) {
-			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$this->_accessToken));
+			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
 		}
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLINFO_HEADER_OUT, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);
-		$qs = $this->buildQueryString($params);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
-		$response = curl_exec($ch); 
+		// if they passed an array, build a list of parameters from it
+		if (is_array($params)) {
+			$params = $this->buildQueryString($params);
+		}
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+		$this->_last_response = curl_exec($ch); 
+		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
 		curl_close($ch);
-		$response = $this->parseHeaders($response);
+		$response = $this->parseHeaders($this->_last_response);
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {
 			if (is_array($response['error'])) {
@@ -331,14 +362,16 @@ class AppDotNet {
 	 * bare URL, include the anchor text in the post's text and include a link 
 	 * entity in the post creation call.
 	 * @param string $text The text of the post
-	 * @param array $params An associative array of optional post parameters. This
+	 * @param array $data An associative array of optional post data. This
 	 * will likely change as the API evolves, as of this writing allowed keys are:
-	 * reply_to, annotations, and links.
+	 * reply_to, and annotations. "annotations" may be a complex object represented
+	 * by an associative array.
 	 * @return array An associative array representing the post.
 	 */
-	public function createPost($text=null, $params = array()) {
-		$params['text'] = $text;
-		return $this->httpPost($this->_baseUrl.'posts',$params);
+	public function createPost($text=null, $data = array()) {
+		$data['text'] = $text;
+		$json = json_encode($data);
+		return $this->httpPost($this->_baseUrl.'posts',$json,'application/json');
 	}
 
 	/**
@@ -365,8 +398,8 @@ class AppDotNet {
 	 * @param integer $post_id The ID of the post you want to retrieve replies for.
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are:	count, before_id, since_id, include_muted, include_deleted, and 
-	 * include_directed_posts.
+	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * include_directed_posts, and include_annoations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getPostReplies($post_id=null,$params = array()) {
@@ -381,8 +414,8 @@ class AppDotNet {
 	 * as.
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are:	count, before_id, since_id, include_muted, include_deleted, and 
-	 * include_directed_posts.
+	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * include_directed_posts, and include_annoations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserPosts($user_id='me', $params = array()) {
@@ -397,8 +430,8 @@ class AppDotNet {
 	 * as.
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are:	count, before_id, since_id, include_muted, include_deleted, and 
-	 * include_directed_posts.
+	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * include_directed_posts, and include_annoations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserMentions($user_id='me',$params = array()) {
@@ -410,8 +443,8 @@ class AppDotNet {
 	 * the Users they follow.
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are:	count, before_id, since_id, include_muted, include_deleted, and 
-	 * include_directed_posts.
+	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * include_directed_posts, and include_annoations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserStream($params = array()) {
@@ -477,8 +510,8 @@ class AppDotNet {
 	 * @param string $hashtag The hashtag you're looking for.
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are:	count, before_id, since_id, include_muted, include_deleted, and 
-	 * include_directed_posts.
+	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * include_directed_posts, and include_annoations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function searchHashtags($hashtag=null, $params = array()) {
@@ -490,8 +523,8 @@ class AppDotNet {
 	 * global stream.
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are:	count, before_id, since_id, include_muted, include_deleted, and 
-	 * include_directed_posts.
+	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * include_directed_posts, and include_annoations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getPublicPosts($params = array()) {
@@ -541,6 +574,13 @@ class AppDotNet {
 	 */
 	public function getMuted() {
 		return $this->httpGet($this->_baseUrl.'users/me/muted');
+	}
+
+	public function getLastRequest() {
+		return $this->_last_request;
+	}
+	public function getLastResponse() {
+		return $this->_last_response;
 	}
 
 }

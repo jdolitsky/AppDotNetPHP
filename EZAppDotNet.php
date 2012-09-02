@@ -17,12 +17,12 @@
  * less automatically.
  */
 
-require_once 'EZsettings.php';
-require_once 'AppDotNet.php';
-
 // comment these two lines out in production
 error_reporting(E_ALL);
-//ini_set('display_errors', 1);
+ini_set('display_errors', 1);
+
+require_once 'EZsettings.php';
+require_once 'AppDotNet.php';
 
 // comment this out if session is started elsewhere
 session_start();
@@ -31,7 +31,6 @@ class EZAppDotNet extends AppDotNet {
 
 	public function __construct($clientId=null,$clientSecret=null) {
 		global $app_clientId,$app_clientSecret;
-		global $app_redirectUri,$app_scope;
 
 		// if client id wasn't passed, and it's in the settings.php file, use it from there
 		if (!$clientId && isset($app_clientId)) {
@@ -46,7 +45,7 @@ class EZAppDotNet extends AppDotNet {
 		}
 
 		// call the parent with the variables we have
-		parent::__construct($clientId,$clientSecret,$app_redirectUri,$app_scope);
+		parent::__construct($clientId,$clientSecret);
 	}
 
 	public function getAuthUrl($redirectUri=null,$scope=null) {
@@ -58,13 +57,21 @@ class EZAppDotNet extends AppDotNet {
 		if (is_null($scope)) {
 			$scope = $app_scope;
 		}
-		return parent::getAuthUrl($redirectUri);
+		return parent::getAuthUrl($redirectUri,$scope);
 	}
 
 	// user login
-	public function setSession($cookie=0) {
+	public function setSession($cookie=0,$callback=null) {
+
+		if (!isset($callback)) {
+			global $app_redirectUri;
+			$cb=$app_redirectUri;
+		} else {
+			$cb=$callback;
+		}
+
 		// try and set the token the original way (eg: if they're logging in)
-		$token = $this->getAccessToken();
+		$token = $this->getAccessToken($cb);
 
 		// if that didn't work, check to see if there's an existing token stored somewhere
 		if (!$token) {
@@ -97,8 +104,7 @@ class EZAppDotNet extends AppDotNet {
 			return $_SESSION['AppDotNetPHPAccessToken'];
 		}
 
-		// whatever we found (even if it's nothing), return it
-		return $this->getAccessToken();
+		return false;
 	}
 
 	// log the user out

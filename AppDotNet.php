@@ -76,6 +76,7 @@ class AppDotNet {
 	 * setAccessToken() later on to return on behalf of the user.
 	 */
 	public function getAccessToken() {
+		global $app_redirectUri;
 		// if there's no access token set, and they're returning from 
 		// the auth page with a code, use the code to get a token
 		if (!$this->_accessToken && isset($_GET['code']) && $_GET['code']) {
@@ -85,7 +86,7 @@ class AppDotNet {
 				'client_id'=>$this->_clientId,
 				'client_secret'=>$this->_clientSecret,
 				'grant_type'=>'authorization_code',
-				'redirect_uri'=>$this->_redirectUri,
+				'redirect_uri'=>$app_redirectUri,
 				'code'=>$_GET['code']
 			);
 
@@ -160,6 +161,8 @@ class AppDotNet {
 	// function to handle all POST requests
 	protected function httpPost($req, $params=array()) {
 		$ch = curl_init($req); 
+		curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__) . '/DigiCertHighAssuranceEVRootCA.crt');
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 		curl_setopt($ch, CURLOPT_POST, true);
 		if ($this->_accessToken) {
 			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$this->_accessToken));
@@ -168,7 +171,7 @@ class AppDotNet {
 		curl_setopt($ch, CURLOPT_HEADER, true);
 		$qs = http_build_query($params);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
-		$response = curl_exec($ch); 
+		$response = curl_exec($ch);
 		curl_close($ch);
 		$response = $this->parseHeaders($response);
 		$response = json_decode($response,true);
@@ -187,6 +190,8 @@ class AppDotNet {
 	// function to handle all GET requests
 	protected function httpGet($req) {
 		$ch = curl_init($req); 
+		curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__) . '/DigiCertHighAssuranceEVRootCA.crt');
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 		curl_setopt($ch, CURLOPT_POST, false);
 		if ($this->_accessToken) {
 			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$this->_accessToken));

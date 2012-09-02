@@ -74,7 +74,7 @@ $clientSecret = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 // construct the AppDotNet object
 $app = new AppDotNet($clientId,$clientSecret);
 
-$redirectUri  = 'http://your-website.com/callback.php';
+$redirectUri  = 'http://localhost/callback.php';
 $scope        =  array('stream','email','write_post','follow','messages','export');
 
 // create an authentication Url

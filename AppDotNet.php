@@ -13,9 +13,6 @@
  * etc. EZAppDotNet assumes you're accessing App.net via a browser, whereas
  * this class tries to make no assumptions at all.
  */
-
-class AppDotNetException extends Exception {}
-
 class AppDotNet {
 
 	private $_baseUrl = 'https://alpha-api.app.net/stream/0/';
@@ -26,6 +23,12 @@ class AppDotNet {
 	// stores the access token after login
 	private $_accessToken = null;
 
+	// stores the user ID returned when fetching the auth token
+	private $_user_id = null;
+
+	// stores the username returned when fetching the auth token
+	private $_username = null;
+
 	// The total number of requests you're allowed within the alloted time period
 	private $_rateLimit = null;
 
@@ -35,10 +38,21 @@ class AppDotNet {
 	// The number of seconds remaining in the alloted time period
 	private $_rateLimitReset = null;
 
-	// constructor
-	public function __construct($clientId,$clientSecret) {
-		$this->_clientId = $clientId;
-		$this->_clientSecret = $clientSecret;
+	// debug info
+	private $_last_request = null;
+	private $_last_response = null;
+
+	/**
+	 * Constructs an AppDotNet PHP object with the specified client ID and 
+	 * client secret.
+	 * @param string $client_id The client ID you received from App.net when 
+	 * creating your app.
+	 * @param string $client_secret The client secret you received from 
+	 * App.net when creating your app.
+	 */
+	public function __construct($client_id,$client_secret) {
+		$this->_clientId = $client_id;
+		$this->_clientSecret = $client_secret;
 	}
 
 	/**
@@ -53,21 +67,22 @@ class AppDotNet {
 	 * messages, and export. If you don't specify anything, you'll only receive
 	 * access to the user's basic profile (the default).
 	 */
-	public function getAuthUrl($callbackUri,$scope=null) {
+	public function getAuthUrl($callback_uri,$scope=null) {
 
 		// construct an authorization url based on our client id and other data
 		$data = array(
 			'client_id'=>$this->_clientId,
 			'response_type'=>'code',
-			'redirect_uri'=>$callbackUri,
+			'redirect_uri'=>$callback_uri,
 		);
 
+		$url = $this->_authUrl.'authenticate?'.$this->buildQueryString($data);
 		if ($scope) {
-			$data['scope'] = implode('+',$scope);
+			$url .= '&scope='.implode('+',$scope);
 		}
 
 		// return the constructed url
-		return $this->_authUrl.'authenticate?'.http_build_query($data);
+		return $url;
 	}
 
 	/**
@@ -75,8 +90,7 @@ class AppDotNet {
 	 * token. For example, you could store it in a database and use 
 	 * setAccessToken() later on to return on behalf of the user.
 	 */
-	public function getAccessToken() {
-		global $app_redirectUri;
+	public function getAccessToken($callback_uri) {
 		// if there's no access token set, and they're returning from 
 		// the auth page with a code, use the code to get a token
 		if (!$this->_accessToken && isset($_GET['code']) && $_GET['code']) {
@@ -86,42 +100,61 @@ class AppDotNet {
 				'client_id'=>$this->_clientId,
 				'client_secret'=>$this->_clientSecret,
 				'grant_type'=>'authorization_code',
-				'redirect_uri'=>$app_redirectUri,
+				'redirect_uri'=>$callback_uri,
 				'code'=>$_GET['code']
 			);
 
 			// try and fetch the token with the above data
-			$res = $this->httpPost($this->_authUrl.'access_token', $data);
+			$res = $this->http('Post', $this->_authUrl.'access_token', $data);
 
 			// store it for later
 			$this->_accessToken = $res['access_token'];
+			$this->_username = $res['username'];
+			$this->_user_id = $res['user_id'];
 		}
 
 		// return what we have (this may be a token, or it may be nothing)
 		return $this->_accessToken;
 	}
 
-	// set the access token (eg: after retrieving it from offline storage)
+	/**
+	 * Set the access token (eg: after retrieving it from offline storage)
+	 * @param string $token A valid access token you're previously received 
+	 * from calling getAccessToken().
+	 */
 	public function setAccessToken($token) {
 		$this->_accessToken = $token;
 	}
 
-	// The total number of requests you're allowed within the alloted time period
+	/**
+	 * Returns the total number of requests you're allowed within the 
+	 * alloted time period.
+	 * @see getRateLimitReset()
+	 */
 	public function getRateLimit() {
 		return $this->_rateLimit;
 	}
 
-	// The number of requests you have remaining within the alloted time period
+	/**
+	 * The number of requests you have remaining within the alloted time period
+	 * @see getRateLimitReset()
+	 */
 	public function getRateLimitRemaining() {
 		return $_rateLimitRemaining;
 	}
 
-	// The number of seconds remaining in the alloted time period
-	// When this time is up you'll have getRateLimit() available again
+	/**
+	 * The number of seconds remaining in the alloted time period.
+	 * When this time is up you'll have getRateLimit() available again.
+	 */
 	public function getRateLimitReset() {
 		return $_rateLimitReset;
 	}
 
+	/**
+	 * Internal function, parses out important information App.net adds
+	 * to the headers.
+	 */
 	protected function parseHeaders($response) {
 		// take out the headers
 		// set internal variables
@@ -130,7 +163,14 @@ class AppDotNet {
 		$this->rateLimitRemaining = null;
 		$this->rateLimitReset = null;
 
-		list($headers,$content) = explode("\r\n\r\n",$response,2);
+		$response = explode("\r\n\r\n",$response,2);
+		$headers = $response[0];
+		if (isset($response[1])) {
+			$content = $response[1];
+		}
+		else {
+			$content = null;
+		}
 
 		// this is not a good way to parse http headers
 		// it will not (for example) take into account multiline headers
@@ -158,24 +198,53 @@ class AppDotNet {
 		return $content;
 	}
 
-	// function to handle all POST requests
-	protected function httpPost($req, $params=array()) {
-		$ch = curl_init($req); 
-		curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__) . '/DigiCertHighAssuranceEVRootCA.crt');
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-		curl_setopt($ch, CURLOPT_POST, true);
-		if ($this->_accessToken) {
-			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$this->_accessToken));
+	/** 
+	 * Internal function. Used to turn things like TRUE into 1, and then
+	 * calls http_build_query.
+	 */
+	protected function buildQueryString($array) {
+		foreach ($array as $k=>&$v) {
+			if ($v===true) {
+				$v = '1';
+			}
+			elseif ($v===false) {
+				$v = '0';
+			}
+			unset($v);
 		}
+		return http_build_query($array);
+	}
+
+	/**
+	 * Internal function. Handle all HTTP requests; GET, POST and DELETE
+	 */
+
+	protected function http($act, $req, $params=array(),$contentType='application/x-www-form-urlencoded') {
+		$ch = curl_init($req); 
+		$headers = array();
+		if($act == 'Post' || $act == 'Delete') {
+			curl_setopt($ch, CURLOPT_POST, true);
+			// if they passed an array, build a list of parameters from it
+			if (is_array($params)) {
+				$params = $this->buildQueryString($params);
+			}
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+			$headers[] = "Content-Type: ".$contentType;
+		}
+		if($act == 'Delete') {
+			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+		}
+		if ($this->_accessToken) {
+			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
+		}
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLINFO_HEADER_OUT, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);
-		$qs = http_build_query($params);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
-	//	curl_setopt($ch, CURLOPT_STDERR, fopen(dirname(__FILE__) . '/curl_log', a));
-	//	curl_setopt($ch, CURLOPT_VERBOSE, true);
-		$response = curl_exec($ch);
+		$this->_last_response = curl_exec($ch); 
+		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
 		curl_close($ch);
-		$response = $this->parseHeaders($response);
+		$response = $this->parseHeaders($this->_last_response);
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {
 			if (is_array($response['error'])) {
@@ -187,372 +256,230 @@ class AppDotNet {
 		} else {
 			return $response;
 		}
+
+
 	}
 
-	// function to handle all GET requests
-	protected function httpGet($req) {
-		$ch = curl_init($req); 
-		curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__) . '/DigiCertHighAssuranceEVRootCA.crt');
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-		curl_setopt($ch, CURLOPT_POST, false);
-		if ($this->_accessToken) {
-			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$this->_accessToken));
-		}
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_HEADER, true);
-		$response = curl_exec($ch); 
-		curl_close($ch);
-		$response = $this->parseHeaders($response);
-		$response = json_decode($response,true);
-		if (isset($response['error'])) {
-			if (is_array($response['error'])) {
-				throw new AppDotNetException($response['error']['message'],$response['error']['code']);
-			}
-			else {
-				throw new AppDotNetException($response['error']);
-			}
-		} else {
-			return $response;
-		}
-		
-	}
-
-	// function to handle all DELETE requests
-	protected function httpDelete($req, $params=array()) {
-		$ch = curl_init($req); 
-		curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__) . '/DigiCertHighAssuranceEVRootCA.crt');
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-		curl_setopt($ch, CURLOPT_POST, true);
-		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
-		if ($this->_accessToken) {
-			curl_setopt($ch,CURLOPT_HTTPHEADER,array('Authorization: Bearer '.$this->_accessToken));
-		}
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_HEADER, true);
-		$qs = http_build_query($params);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
-		$response = curl_exec($ch); 
-		curl_close($ch);
-		$response = $this->parseHeaders($response);
-		$response = json_decode($response,true);
-		if (isset($response['error'])) {
-			if (is_array($response['error'])) {
-				throw new AppDotNetException($response['error']['message'],$response['error']['code']);
-			}
-			else {
-				throw new AppDotNetException($response['error']);
-			}
-		} else {
-			return $response;
-		}
-	}
-
-	// Return the Filters for the current user.
+	/**
+	 * Return the Filters for the current user.
+	 */
 	public function getAllFilters() {
-		
-		return $this->httpGet($this->_baseUrl.'filters');
-
+		return $this->http('Get', $this->_baseUrl.'filters');
 	}
 
-	// Create a Filter for the current user.
-	public function createFilter($name='New filter', $user_ids=array(), $hashtags=array(), 
-                                     $link_domains=array(), $mention_user_ids= array()) {
-		$params = array(
-			'name'=>$name, 
-			'user_ids'=>$user_ids, 
-			'hashtags'=>$hashtags,
-			'link_domains'=>$link_domains, 
-			'mention_user_ids'=>$mention_user_ids
-		);
-		return $this->httpPost($this->_baseUrl.'filters',$params);
+	/**
+	 * Create a Filter for the current user.
+	 * @param string $name The name of the new filter
+	 * @param array $filters An associative array of filters to be applied.
+	 * This may change as the API evolves, as of this writing possible
+	 * values are: user_ids, hashtags, link_domains, and mention_user_ids.
+	 * You will need to provide at least one filter name=>value pair.
+	 */
+	public function createFilter($name='New filter', $filters=array()) {
+		$filters['name'] = $name;
+		return $this->http('Post', $this->_baseUrl.'filters',$filters);
 	}
 
-	// Returns a specific Filter object.
+	/**
+	 * Returns a specific Filter object.
+	 * @param integer $filter_id The ID of the filter you wish to retrieve.
+	 */
 	public function getFilter($filter_id=null) {
-		
-		return $this->httpGet($this->_baseUrl.'filters/'.$filter_id);
-
+		return $this->http('Get', $this->_baseUrl.'filters/'.urlencode($filter_id));
 	}
 
-	// Delete a Filter. The Filter must belong to the current User. 
-	// It returns the deleted Filter on success.
+	/**
+	 * Delete a Filter. The Filter must belong to the current User. 
+	 * @return object Returns the deleted Filter on success.
+	 */
 	public function deleteFilter($filter_id=null) {
-		
-		return $this->httpDelete($this->_baseUrl.'filters');
-
+		return $this->http('Delete', $this->_baseUrl.'filters/'.urlencode($filter_id));
 	}
 
-	// Create a new Post object. Mentions and hashtags will be parsed out of the 
-	// post text, as will bare URLs. To create a link in a post without using a 
-	// bare URL, include the anchor text in the post's text and include a link 
-	// entity in the post creation call.
-	public function createPost($text=null, $reply_to=null, $annotations=null, $links=null) {
-		$params = array(
-			'text'=>$text,
-			'reply_to'=>$reply_to, 
-			'annotations'=>$annotations, 
-			'links'=>$links
-		);
-		return $this->httpPost($this->_baseUrl.'posts',$params);
+	/**
+	 * Create a new Post object. Mentions and hashtags will be parsed out of the 
+	 * post text, as will bare URLs. To create a link in a post without using a 
+	 * bare URL, include the anchor text in the post's text and include a link 
+	 * entity in the post creation call.
+	 * @param string $text The text of the post
+	 * @param array $data An associative array of optional post data. This
+	 * will likely change as the API evolves, as of this writing allowed keys are:
+	 * reply_to, and annotations. "annotations" may be a complex object represented
+	 * by an associative array.
+	 * @return array An associative array representing the post.
+	 */
+	public function createPost($text=null, $data = array()) {
+		$data['text'] = $text;
+		$json = json_encode($data);
+		return $this->http('Post', $this->_baseUrl.'posts',$json,'application/json');
 	}
 
-	// Returns a specific Post.
+	/**
+	 * Returns a specific Post.
+	 * @param integer $post_id The ID of the post to retrieve
+	 * @return array An associative array representing the post
+	 */
 	public function getPost($post_id=null) {
-
-		return $this->httpGet($this->_baseUrl.'posts/'.$post_id);
-
+		return $this->http('Get', $this->_baseUrl.'posts/'.urlencode($post_id));
 	}
 
-	// Delete a Post. The current user must be the same user who created the Post. 
-	// It returns the deleted Post on success.
+	/**
+	 * Delete a Post. The current user must be the same user who created the Post. 
+	 * It returns the deleted Post on success.
+	 * @param integer $post_id The ID of the post to delete
+	 * @param array An associative array representing the post that was deleted
+	 */
 	public function deletePost($post_id=null) {
-
-		return $this->httpDelete($this->_baseUrl.'posts/'.$post_id);
-
+		return $this->http('Delete', $this->_baseUrl.'posts/'.urlencode($post_id));
 	}
 
-	// Retrieve the Posts that are 'in reply to' a specific Post.
-	public function getPostReplies($post_id=null,$count=null,$before_id=null,$since_id=null) {
-		$params = array();
-		if ($count) {
-			$params['count'] = $count;
-		}
-		if ($before_id) {
-			$params['before_id'] = $before_id;
-		}
-		if ($since_id) {
-			$params['since_id'] = $since_id;
-		}
-		return $this->httpGet($this->_baseUrl.'posts/'.$post_id.'/replies?'.http_build_query($params));
+	/**
+	 * Retrieve the Posts that are 'in reply to' a specific Post.
+	 * @param integer $post_id The ID of the post you want to retrieve replies for.
+	 * @param array $params An associative array of optional general parameters. 
+	 * This will likely change as the API evolves, as of this writing allowed keys 
+	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * include_directed_posts, and include_annoations.
+	 * @return An array of associative arrays, each representing a single post.
+	 */
+	public function getPostReplies($post_id=null,$params = array()) {
+		return $this->http('Get', $this->_baseUrl.'posts/'.urlencode($post_id).'/replies?'.$this->buildQueryString($params));
 	}
-	
-	// Get the most recent Posts created by a specific User in reverse 
-	// chronological order.
-	public function getUserPosts($user_id='me',$count=null,$before_id=null,$since_id=null) {
-		$params = array();
-		if ($count) {
-			$params['count'] = $count;
-		}
-		if ($before_id) {
-			$params['before_id'] = $before_id;
-		}
-		if ($since_id) {
-			$params['since_id'] = $since_id;
-		}
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/posts?'.http_build_query($params));
+
+	/**
+	 * Get the most recent Posts created by a specific User in reverse 
+	 * chronological order (most recent first).
+	 * @param mixed $user_id Either the ID of the user you wish to retrieve posts by,
+	 * or the string "me", which will retrieve posts for the user you're authenticated
+	 * as.
+	 * @param array $params An associative array of optional general parameters. 
+	 * This will likely change as the API evolves, as of this writing allowed keys 
+	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * include_directed_posts, and include_annoations.
+	 * @return An array of associative arrays, each representing a single post.
+	 */
+	public function getUserPosts($user_id='me', $params = array()) {
+		return $this->http('Get', $this->_baseUrl.'users/'.urlencode($user_id).'/posts?'.$this->buildQueryString($params));
 	}
 	
-	// Get the most recent Posts mentioning by a specific User in reverse 
-	// chronological order.
-	public function getUserMentions($user_id='me',$count=null,$before_id=null,$since_id=null) {
-		$params = array();
-		if ($count) {
-			$params['count'] = $count;
-		}
-		if ($before_id) {
-			$params['before_id'] = $before_id;
-		}
-		if ($since_id) {
-			$params['since_id'] = $since_id;
-		}
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/mentions?'.http_build_query($params));
-	
+	/**
+	 * Get the most recent Posts mentioning by a specific User in reverse 
+	 * chronological order (newest first).
+	 * @param mixed $user_id Either the ID of the user who is being mentioned, or 
+	 * the string "me", which will retrieve posts for the user you're authenticated
+	 * as.
+	 * @param array $params An associative array of optional general parameters. 
+	 * This will likely change as the API evolves, as of this writing allowed keys 
+	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * include_directed_posts, and include_annoations.
+	 * @return An array of associative arrays, each representing a single post.
+	 */
+	public function getUserMentions($user_id='me',$params = array()) {
+		return $this->http('Get', $this->_baseUrl.'users/'.urlencode($user_id).'/mentions?'.$this->buildQueryString($params));
 	}
 
-	// Return the 20 most recent Posts from the current User and 
-	// the Users they follow.
-	public function getUserStream($user_id='me',$count=null,$before_id=null,$since_id=null) {
-		$params = array();
-		if ($count) {
-			$params['count'] = $count;
-		}
-		if ($before_id) {
-			$params['before_id'] = $before_id;
-		}
-		if ($since_id) {
-			$params['since_id'] = $since_id;
-		}
-		return $this->httpGet($this->_baseUrl.'posts/stream?'.http_build_query($params));
-	
+	/**
+	 * Return the 20 most recent posts from the current User and 
+	 * the Users they follow.
+	 * @param array $params An associative array of optional general parameters. 
+	 * This will likely change as the API evolves, as of this writing allowed keys 
+	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * include_directed_posts, and include_annoations.
+	 * @return An array of associative arrays, each representing a single post.
+	 */
+	public function getUserStream($params = array()) {
+		return $this->http('Get', $this->_baseUrl.'posts/stream?'.$this->buildQueryString($params));
 	}
 
-	// Returns a specific User object.
+	/**
+	 * Returns a specific user object.
+	 * @param mixed $user_id The ID of the user you want to retrieve, or the string
+	 * "me" to retrieve data for the users you're currently authenticated as.
+	 * @return array An associative array representing the user data.
+	 */
 	public function getUser($user_id='me') {
-
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id);
-
+		return $this->http('Get', $this->_baseUrl.'users/'.urlencode($user_id));
 	}
 
-	// Returns the User object of the user being followed.
+	/**
+	 * Add the specified user ID to the list of users followed.
+	 * Returns the User object of the user being followed.
+	 * @param integer $user_id The user ID of the user to follow.
+	 * @return array An associative array representing the user you just followed.
+	 */
 	public function followUser($user_id=null) {
-
-		return $this->httpPost($this->_baseUrl.'users/'.$user_id.'/follow');
-
+		return $this->http('Post', $this->_baseUrl.'users/'.urlencode($user_id).'/follow');
 	}
 
-	// Returns the User object of the user being unfollowed.
+	/**
+	 * Removes the specified user ID to the list of users followed.
+	 * Returns the User object of the user being unfollowed.
+	 * @param integer $user_id The user ID of the user to unfollow.
+	 * @return array An associative array representing the user you just unfollowed.
+	 */
 	public function unfollowUser($user_id=null) {
-
-		return $this->httpDelete($this->_baseUrl.'users/'.$user_id.'/follow');
-
+		return $this->http('Delete', $this->_baseUrl.'users/'.urlencode($user_id).'/follow');
 	}
 
-	// Returns an array of User objects the specified user is following.
-	public function getFollowing($user_id='me',$count=null,$before_id=null,$since_id=null) {
-		$params = array();
-		if ($count) {
-			$params['count'] = $count;
-		}
-		if ($before_id) {
-			$params['before_id'] = $before_id;
-		}
-		if ($since_id) {
-			$params['since_id'] = $since_id;
-		}
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/following?'.http_build_query($params));
+	/**
+	 * Returns an array of User objects the specified user is following.
+	 * @param mixed $user_id Either the ID of the user being followed, or 
+	 * the string "me", which will retrieve posts for the user you're authenticated
+	 * as.
+	 * @return array An array of associative arrays, each representing a single 
+	 * user following $user_id
+	 */
+	public function getFollowing($user_id='me') {
+		return $this->http('Get', $this->_baseUrl.'users/'.$user_id.'/following');
 	}
 	
-	// Returns an array of User objects for users following the specified user.
-	public function getFollowers($user_id='me',$count=null,$before_id=null,$since_id=null) {
-		$params = array();
-		if ($count) {
-			$params['count'] = $count;
-		}
-		if ($before_id) {
-			$params['before_id'] = $before_id;
-		}
-		if ($since_id) {
-			$params['since_id'] = $since_id;
-		}
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/followers?'.http_build_query($params));
-	}
-	
-	// Return the 20 most recent Posts for a specific hashtag.
-	public function searchHashtags($hashtag=null,$count=null,$before_id=null,$since_id=null) {
-		$params = array();
-		if ($count) {
-			$params['count'] = $count;
-		}
-		if ($before_id) {
-			$params['before_id'] = $before_id;
-		}
-		if ($since_id) {
-			$params['since_id'] = $since_id;
-		}
-		return $this->httpGet($this->_baseUrl.'posts/tag/'.$hashtag.'?'.http_build_query($params));
-	}
-	
-	// Retrieve a personalized Stream for the current authorized User. This endpoint 
-	// is similar to the 'Retrieve a User's personalized stream' endpoint.
-	public function getUserRealTimeStream($count=null,$before_id=null,$since_id=null) {
-		$params = array();
-		if ($count) {
-			$params['count'] = $count;
-		}
-		if ($before_id) {
-			$params['before_id'] = $before_id;
-		}
-		if ($since_id) {
-			$params['since_id'] = $since_id;
-		}
-		return $this->httpGet($this->_baseUrl.'posts/stream?'.http_build_query($params));
-	
-	}
-	
-	// Retrieve a personalized Stream for the specified users. This endpoint is similar
-	// to the 'Retrieve a User's personalized stream' endpoint.
-	public function getUsersRealTimeStream($user_ids=null,$count=null,$before_id=null,$since_id=null) {
-		$params = array();
-		if ($user_ids) {
-			$params['user_ids'] = json_encode($user_ids);
-		}
-		if ($count) {
-			$params['count'] = $count;
-		}
-		if ($before_id) {
-			$params['before_id'] = $before_id;
-		}
-		if ($since_id) {
-			$params['since_id'] = $since_id;
-		}
-		return $this->httpGet($this->_baseUrl.'streams/app?'.http_build_query($params));
-	}
-	
-	// Retrieve a Stream of all public Posts on App.net.
-	public function getPublicPosts($count=null,$before_id=null,$since_id=null) {
-		$params = array();
-		if ($count) {
-			$params['count'] = $count;
-		}
-		if ($before_id) {
-			$params['before_id'] = $before_id;
-		}
-		if ($since_id) {
-			$params['since_id'] = $since_id;
-		}
-		return $this->httpGet($this->_baseUrl.'posts/stream/global?'.http_build_query($params));
+	/**
+	 * Returns an array of User objects for users following the specified user.
+	 * @param mixed $user_id Either the ID of the user being followed, or 
+	 * the string "me", which will retrieve posts for the user you're authenticated
+	 * as.
+	 * @return array An array of associative arrays, each representing a single 
+	 * user following $user_id
+	 */
+	public function getFollowers($user_id='me') {
+		return $this->http('Get', $this->_baseUrl.'users/'.$user_id.'/followers');
 	}
 
-	// Retrieve the current status for a specific Stream
-	public function getStreamStatus($stream_id=null) {
-
-		return $this->httpGet($this->_baseUrl.'streams/'.$stream_id);
-
+	/**
+	 * Return Posts matching a specific #hashtag.
+	 * @param string $hashtag The hashtag you're looking for.
+	 * @param array $params An associative array of optional general parameters. 
+	 * This will likely change as the API evolves, as of this writing allowed keys 
+	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * include_directed_posts, and include_annoations.
+	 * @return An array of associative arrays, each representing a single post.
+	 */
+	public function searchHashtags($hashtag=null, $params = array()) {
+		return $this->http('Get', $this->_baseUrl.'posts/tag/'.urlencode($hashtag).'?'.$this->buildQueryString($params));
 	}
 
-	// Change the Posts returned in the specified Stream.
-	public function controlStream($stream_id=null, $data=array()) {
-
-		return $this->httpPost($this->_baseUrl.'streams/'.$stream_id, $data);
-
+	/**
+	 * Retrieve a list of all public Posts on App.net, often referred to as the
+	 * global stream.
+	 * @param array $params An associative array of optional general parameters. 
+	 * This will likely change as the API evolves, as of this writing allowed keys 
+	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * include_directed_posts, and include_annoations.
+	 * @return An array of associative arrays, each representing a single post.
+	 */
+	public function getPublicPosts($params = array()) {
+		return $this->http('Get', $this->_baseUrl.'posts/stream/global?'.$this->buildQueryString($params));
 	}
 
-	// List all the Subscriptions this app is currently subscribed to. 
-	// This resource must be accessed with an App access token.
-	public function listSubscriptions() {
-
-		return $this->httpGet($this->_baseUrl.'subscriptions');
-
-	}
-
-	// Create a new subscription. Returns either 201 CREATED or an error 
-	// status code. Please read the general subscription information to 
-	// understand the entire subscription process. This resource must be 
-	// accessed with an App access token.
-	public function createSubscription($object='user', $aspect=null, 
-                                    $callback_url=null, $verify_token=null) {
-
-		$params = array(
-			'object'=>$object, 
-			'aspect'=>$aspect, 
-			'callback_url'=>$callback_url, 
-			'verify_token'=>$verify_token
-		);
-
-		return $this->httpPost($this->_baseUrl.'subscriptions', $params);
-
-	}
-
-	// Delete a single subscription. Returns the deleted subscription. 
-	// This resource must be accessed with an App access token.
-	public function deleteSubscription($subscription_id=null) {
-
-		return $this->httpDelete($this->_baseUrl.'subscriptions/'.$subscription_id);
-
-	}
-
-	// Delete all subscriptions for the authorized App. Returns a list 
-	// of the deleted subscriptions. This resource must be accessed with 
-	// an App access token.
-	public function deleteAllSubscriptions() {
-
-		return $this->httpDelete($this->_baseUrl.'subscriptions');
-
-	}
-
-	// workaround function to return userID by username
+	/**
+	 * Retrieve a user's user ID by specifying their username.
+	 * Not currently supported by the API, so we scrape the alpha.app.net site for the info.
+	 * @param string $username The username of the user you want the ID of, without
+	 * an @ symbol at the beginning.
+	 * @return integer The user's user ID
+	 */
 	public function getIdByUsername($username=null) {
-		$ch = curl_init('https://alpha.app.net/'.$username); 
+		$ch = curl_init('https://alpha.app.net/'.urlencode(strtolower($username))); 
 		curl_setopt($ch, CURLOPT_POST, false);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch,CURLOPT_USERAGENT,
@@ -565,29 +492,38 @@ class AppDotNet {
 		return $user_id;
 	}
 	
-	// Mute user
+	/**
+	 * Mute a user
+	 * @param integer $user_id The user ID to mute
+	 */
 	public function muteUser($user_id=null) {
-	 	return $this->httpPost($this->_baseUrl.'users/'.$user_id.'/mute');
+	 	return $this->http('Post', $this->_baseUrl.'users/'.urlencode($user_id).'/mute');
 	}   
 	
-	// Unmute user
+	/**
+	 * Unmute a user
+	 * @param integer $user_id The user ID to unmute
+	 */
 	public function unmuteUser($user_id=null) {
-		return $this->httpDelete($this->_baseUrl.'users/'.$user_id.'/mute');
+		return $this->http('Delete', $this->_baseUrl.'users/'.urlencode($user_id).'/mute');
 	}       
-	
-	// List the users muted by the current user
-	public function getMuted($user_id='me',$count=null,$before_id=null,$since_id=null) {
-		$params = array();
-		if ($count) {
-			$params['count'] = $count;
-		}
-		if ($before_id) {
-			$params['before_id'] = $before_id;
-		}
-		if ($since_id) {
-			$params['since_id'] = $since_id;
-		}
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/muted?'.http_build_query($params));
+
+	/**
+	 * List the users muted by the current user
+	 * @return array An array of associative arrays, each representing one muted user.
+	 */
+	public function getMuted() {
+		return $this->http('Get', $this->_baseUrl.'users/me/muted');
+	}
+
+	public function getLastRequest() {
+		return $this->_last_request;
+	}
+	public function getLastResponse() {
+		return $this->_last_response;
 	}
 
 }
+
+
+class AppDotNetException extends Exception {}

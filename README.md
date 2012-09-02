@@ -70,11 +70,12 @@ require_once 'AppDotNet.php';
 // change these to your app's values
 $clientId     = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 $clientSecret = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
-$redirectUri  = 'http://your-website.com/callback.php';
-$scope        =  array('stream','email','write_post','follow','messages','export');
 
 // construct the AppDotNet object
 $app = new AppDotNet($clientId,$clientSecret);
+
+$redirectUri  = 'http://your-website.com/callback.php';
+$scope        =  array('stream','email','write_post','follow','messages','export');
 
 // create an authentication Url
 $url = $app->getAuthUrl($redirectUri,$scope);

@@ -37,8 +37,8 @@ if ($app->getSession()) {
 		print "<hr />";
 		print "<h3>Testing ADN functionality</h3>";
 		print '<pre>';
-		print '<b>Your access token is: </b>'.htmlspecialchars($app->getAccessToken())."\n";
-		$token = $app->getAccessToken();
+		print '<b>Your access token is: </b>'.htmlspecialchars($app->setSession())."\n";
+		$token = $app->setSession();
 		print "<b>Clearing access token</b>\n";
 		$app->setAccessToken(null);
 		print "<b>Checking that we can no longer access app.net's API...</b>";
@@ -153,5 +153,4 @@ if ($app->getSession()) {
 }
 
 ?>
-
 

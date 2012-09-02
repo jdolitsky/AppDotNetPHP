@@ -56,7 +56,7 @@ if ($app->getSession()) {
 
 ?>
 ```
-To view a full example in action, you should unpack/clone this project into your webroot directory. Edit the values in **EZsettings.php** to reflect the ones for your app (to make things easy, change the Callback URL within your app.net developers console to http://your-website.com/AppDotNetPHP/ez-example/callback.php). Add or remove values from the $app_scope array to change the permissions your app will have with the authenticated user. Travel to http://your-website.com/AppDotNetPHP/ez-example/ and click 'Sign in with App.net'.
+To view a full example in action, you should copy the project files into your webroot directory. Edit the values in **EZsettings.php** to reflect the ones for your app (to make things easy, change the Callback URL within your app.net developers console to http://localhost/ez-example/callback.php). Add or remove values from the $app_scope array to change the permissions your app will have with the authenticated user. Travel to http://localhost/ez-example/ and click 'Sign in with App.net'.
 
 ###AppDotNet
 Use this class if you need more control of your application (such as running a command line process) or are integrating your code with an existing application that handles sessions/cookies in a different way. 

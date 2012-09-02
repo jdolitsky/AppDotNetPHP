@@ -88,8 +88,6 @@ Once the user has authenticated the app, grab the token in the callback script, 
 require_once 'AppDotNet.php';
 $app = new AppDotNet($clientId,$clientSecret);
 
-$redirectUri  = 'http://your-website.com/callback.php';
-
 // get the token returned by App.net
 // (this also sets the token)
 $token = $app->getAccessToken($redirectUri);

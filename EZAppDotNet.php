@@ -17,12 +17,12 @@
  * less automatically.
  */
 
-require_once 'EZsettings.php';
-require_once 'AppDotNet.php';
-
 // comment these two lines out in production
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+
+require_once 'EZsettings.php';
+require_once 'AppDotNet.php';
 
 // comment this out if session is started elsewhere
 session_start();

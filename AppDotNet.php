@@ -171,6 +171,8 @@ class AppDotNet {
 		curl_setopt($ch, CURLOPT_HEADER, true);
 		$qs = http_build_query($params);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $qs);
+	//	curl_setopt($ch, CURLOPT_STDERR, fopen(dirname(__FILE__) . '/curl_log', a));
+	//	curl_setopt($ch, CURLOPT_VERBOSE, true);
 		$response = curl_exec($ch);
 		curl_close($ch);
 		$response = $this->parseHeaders($response);
@@ -218,6 +220,8 @@ class AppDotNet {
 	// function to handle all DELETE requests
 	protected function httpDelete($req, $params=array()) {
 		$ch = curl_init($req); 
+		curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__) . '/DigiCertHighAssuranceEVRootCA.crt');
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 		curl_setopt($ch, CURLOPT_POST, true);
 		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
 		if ($this->_accessToken) {

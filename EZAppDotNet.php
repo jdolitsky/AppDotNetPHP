@@ -45,7 +45,7 @@ class EZAppDotNet extends AppDotNet {
 		}
 
 		// call the parent with the variables we have
-		parent::__construct($clientId,$clientSecret,$redirectUri,$scope);
+		parent::__construct($clientId,$clientSecret);
 	}
 
 	public function getAuthUrl($redirectUri=null,$scope=null) {
@@ -57,13 +57,21 @@ class EZAppDotNet extends AppDotNet {
 		if (is_null($scope)) {
 			$scope = $app_scope;
 		}
-		return parent::getAuthUrl();
+		return parent::getAuthUrl($redirectUri,$scope);
 	}
 
 	// user login
-	public function setSession($cookie=0) {
+	public function setSession($cookie=0,$callback=null) {
+
+		if (!isset($callback)) {
+			global $app_redirectUri;
+			$cb=$app_redirectUri;
+		} else {
+			$cb=$callback;
+		}
+
 		// try and set the token the original way (eg: if they're logging in)
-		$token = $this->getAccessToken();
+		$token = $this->getAccessToken($cb);
 
 		// if that didn't work, check to see if there's an existing token stored somewhere
 		if (!$token) {
@@ -96,8 +104,7 @@ class EZAppDotNet extends AppDotNet {
 			return $_SESSION['AppDotNetPHPAccessToken'];
 		}
 
-		// whatever we found (even if it's nothing), return it
-		return $this->getAccessToken();
+		return false;
 	}
 
 	// log the user out

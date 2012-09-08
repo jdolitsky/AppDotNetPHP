@@ -589,18 +589,28 @@ class AppDotNet {
 
 	/**
 	* Unstar a post
-	* @param integer $post_id The user ID to unstar
+	* @param integer $post_id The post ID to unstar
 	*/
 	public function unstarPost($post_id=null) {
 		return $this->httpDelete($this->_baseUrl.'posts/'.urlencode($post_id).'/star');
 	}
 
 	/**
-	* List the posts started by the current user
-	* @return array An array of associative arrays, each representing one starred post.
+	* List the posts starred by the current user
+	* @return array An array of associative arrays, each representing a single 
+	* user who has starred a post
 	*/
 	public function getStarred($user_id='me') {
 		return $this->httpGet($this->_baseUrl.'users/'.urlencode($user_id).'/stars');
+	}
+
+	/**
+	* List the users who have starred a post
+	* @param integer $post_id the post ID to get stars from
+	* @return array An array of associative arrays, each representing one user.
+	*/
+	public function getStars($post_id=null) {
+		return $this->httpGet($this->_baseUrl.'posts/'.$post_id.'/stars');
 	}
 
 	public function getLastRequest() {

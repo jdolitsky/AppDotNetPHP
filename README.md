@@ -16,7 +16,9 @@ The Stream API is currently under development. This library will be rapidly chan
 * <a href="https://alpha.app.net/jdolitsky" target="_blank">@jdolitsky</a>
 * <a href="https://alpha.app.net/ravisorg" target="_blank">@ravisorg</a>
 * <a href="https://github.com/wpstudio" target="_blank">@wpstudio</a>
-* <a href="https://alpha.app.net/hxf148" target="_blank">@hxf148</a>
+* <a href="https://alpha.app.net/harold" target="_blank">@harold</a>
+* <a href="https://alpha.app.net/edent" target="_blank">@edent</a>
+* <a href="https://alpha.app.net/cdn" target="_blank">@cdn</a>
 
 WARNING:
 ---------

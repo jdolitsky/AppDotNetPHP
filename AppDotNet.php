@@ -105,7 +105,7 @@ class AppDotNet {
 			);
 
 			// try and fetch the token with the above data
-			$res = $this->httpPost($this->_authUrl.'access_token', $data);
+			$res = $this->httpReq('post',$this->_authUrl.'access_token', $data);
 
 			// store it for later
 			$this->_accessToken = $res['access_token'];
@@ -215,49 +215,26 @@ class AppDotNet {
 		return http_build_query($array);
 	}
 
-	/**
-	 * Internal function. Handle all POST requests
+	
+	/** 
+	 * Internal function to handle all 
+	 * HTTP requests (POST,GET,DELETE)
 	 */
-	protected function httpPost($req, $params=array(),$contentType='application/x-www-form-urlencoded') {
+	protected function httpReq($act, $req, $params=array(),$contentType='application/x-www-form-urlencoded') {
 		$ch = curl_init($req); 
-		curl_setopt($ch, CURLOPT_POST, true);
-		$headers = array("Content-Type: ".$contentType);
-		if ($this->_accessToken) {
-			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
-		}
-		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLINFO_HEADER_OUT, true);
-		curl_setopt($ch, CURLOPT_HEADER, true);
-		// if they passed an array, build a list of parameters from it
-		if (is_array($params)) {
-			$params = $this->buildQueryString($params);
-		}
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
-		$this->_last_response = curl_exec($ch); 
-		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
-		curl_close($ch);
-		$response = $this->parseHeaders($this->_last_response);
-		$response = json_decode($response,true);
-		if (isset($response['error'])) {
-			if (is_array($response['error'])) {
-				throw new AppDotNetException($response['error']['message'],$response['error']['code']);
-			}
-			else {
-				throw new AppDotNetException($response['error']);
-			}
-		} else {
-			return $response;
-		}
-	}
-
-	/**
-	 * Internal function. Handles all GET requests
-	 */
-	protected function httpGet($req) {
-		$ch = curl_init($req); 
-		curl_setopt($ch, CURLOPT_POST, false);
 		$headers = array();
+		if($act == 'post' || $act == 'delete') {
+			curl_setopt($ch, CURLOPT_POST, true);
+			// if they passed an array, build a list of parameters from it
+			if (is_array($params)) {
+				$params = $this->buildQueryString($params);
+			}
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+			$headers[] = "Content-Type: ".$contentType;
+		}
+		if($act == 'delete') {
+			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+		}
 		if ($this->_accessToken) {
 			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
 		}
@@ -272,45 +249,8 @@ class AppDotNet {
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {
 			if (is_array($response['error'])) {
-				throw new AppDotNetException($response['error']['message'],$response['error']['code']);
-			}
-			else {
-				throw new AppDotNetException($response['error']);
-			}
-		} else {
-			return $response;
-		}
-		
-	}
-
-	/**
-	 * Internal function. Handles all DELETE requests
-	 */
-	protected function httpDelete($req, $params=array(),$contentType='application/x-www-form-urlencoded') {
-		$ch = curl_init($req); 
-		curl_setopt($ch, CURLOPT_POST, true);
-		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
-		$headers = array("Content-Type: ".$contentType);
-		if ($this->_accessToken) {
-			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
-		}
-		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLINFO_HEADER_OUT, true);
-		curl_setopt($ch, CURLOPT_HEADER, true);
-		// if they passed an array, build a list of parameters from it
-		if (is_array($params)) {
-			$params = $this->buildQueryString($params);
-		}
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
-		$this->_last_response = curl_exec($ch); 
-		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
-		curl_close($ch);
-		$response = $this->parseHeaders($this->_last_response);
-		$response = json_decode($response,true);
-		if (isset($response['error'])) {
-			if (is_array($response['error'])) {
-				throw new AppDotNetException($response['error']['message'],$response['error']['code']);
+				throw new AppDotNetException($response['error']['message'],
+								$response['error']['code']);
 			}
 			else {
 				throw new AppDotNetException($response['error']);
@@ -324,7 +264,7 @@ class AppDotNet {
 	 * Return the Filters for the current user.
 	 */
 	public function getAllFilters() {
-		return $this->httpGet($this->_baseUrl.'filters');
+		return $this->httpReq('get',$this->_baseUrl.'filters');
 	}
 
 	/**
@@ -337,7 +277,7 @@ class AppDotNet {
 	 */
 	public function createFilter($name='New filter', $filters=array()) {
 		$filters['name'] = $name;
-		return $this->httpPost($this->_baseUrl.'filters',$filters);
+		return $this->httpReq('post',$this->_baseUrl.'filters',$filters);
 	}
 
 	/**
@@ -345,7 +285,7 @@ class AppDotNet {
 	 * @param integer $filter_id The ID of the filter you wish to retrieve.
 	 */
 	public function getFilter($filter_id=null) {
-		return $this->httpGet($this->_baseUrl.'filters/'.urlencode($filter_id));
+		return $this->httpReq('get',$this->_baseUrl.'filters/'.urlencode($filter_id));
 	}
 
 	/**
@@ -353,7 +293,7 @@ class AppDotNet {
 	 * @return object Returns the deleted Filter on success.
 	 */
 	public function deleteFilter($filter_id=null) {
-		return $this->httpDelete($this->_baseUrl.'filters/'.urlencode($filter_id));
+		return $this->httpReq('delete',$this->_baseUrl.'filters/'.urlencode($filter_id));
 	}
 
 	/**
@@ -371,7 +311,7 @@ class AppDotNet {
 	public function createPost($text=null, $data = array()) {
 		$data['text'] = $text;
 		$json = json_encode($data);
-		return $this->httpPost($this->_baseUrl.'posts',$json,'application/json');
+		return $this->httpReq('post',$this->_baseUrl.'posts',$json,'application/json');
 	}
 
 	/**
@@ -383,7 +323,8 @@ class AppDotNet {
 	 * @return array An associative array representing the post
 	 */
 	public function getPost($post_id=null,$params = array()) {
-		return $this->httpGet($this->_baseUrl.'posts/'.urlencode($post_id).'?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'posts/'.urlencode($post_id)
+						.'?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -393,7 +334,7 @@ class AppDotNet {
 	 * @param array An associative array representing the post that was deleted
 	 */
 	public function deletePost($post_id=null) {
-		return $this->httpDelete($this->_baseUrl.'posts/'.urlencode($post_id));
+		return $this->httpReq('delete',$this->_baseUrl.'posts/'.urlencode($post_id));
 	}
 
 	/**
@@ -406,7 +347,8 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getPostReplies($post_id=null,$params = array()) {
-		return $this->httpGet($this->_baseUrl.'posts/'.urlencode($post_id).'/replies?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'posts/'.urlencode($post_id)
+				.'/replies?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -422,7 +364,8 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserPosts($user_id='me', $params = array()) {
-		return $this->httpGet($this->_baseUrl.'users/'.urlencode($user_id).'/posts?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'users/'.urlencode($user_id)
+					.'/posts?'.$this->buildQueryString($params));
 	}
 	
 	/**
@@ -438,7 +381,8 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserMentions($user_id='me',$params = array()) {
-		return $this->httpGet($this->_baseUrl.'users/'.urlencode($user_id).'/mentions?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'users/'
+			.urlencode($user_id).'/mentions?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -451,7 +395,7 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserStream($params = array()) {
-		return $this->httpGet($this->_baseUrl.'posts/stream?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'posts/stream?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -461,7 +405,7 @@ class AppDotNet {
 	 * @return array An associative array representing the user data.
 	 */
 	public function getUser($user_id='me') {
-		return $this->httpGet($this->_baseUrl.'users/'.urlencode($user_id));
+		return $this->httpReq('get',$this->_baseUrl.'users/'.urlencode($user_id));
 	}
 
 	/**
@@ -471,7 +415,7 @@ class AppDotNet {
 	 * @return array An associative array representing the user you just followed.
 	 */
 	public function followUser($user_id=null) {
-		return $this->httpPost($this->_baseUrl.'users/'.urlencode($user_id).'/follow');
+		return $this->httpReq('post',$this->_baseUrl.'users/'.urlencode($user_id).'/follow');
 	}
 
 	/**
@@ -481,7 +425,7 @@ class AppDotNet {
 	 * @return array An associative array representing the user you just unfollowed.
 	 */
 	public function unfollowUser($user_id=null) {
-		return $this->httpDelete($this->_baseUrl.'users/'.urlencode($user_id).'/follow');
+		return $this->httpReq('delete',$this->_baseUrl.'users/'.urlencode($user_id).'/follow');
 	}
 
 	/**
@@ -493,7 +437,7 @@ class AppDotNet {
 	 * user following $user_id
 	 */
 	public function getFollowing($user_id='me') {
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/following');
+		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/following');
 	}
 	
 	/**
@@ -505,7 +449,7 @@ class AppDotNet {
 	 * user following $user_id
 	 */
 	public function getFollowers($user_id='me') {
-		return $this->httpGet($this->_baseUrl.'users/'.$user_id.'/followers');
+		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/followers');
 	}
 
 	/**
@@ -518,7 +462,8 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function searchHashtags($hashtag=null, $params = array()) {
-		return $this->httpGet($this->_baseUrl.'posts/tag/'.urlencode($hashtag).'?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'posts/tag/'
+				.urlencode($hashtag).'?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -531,7 +476,7 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getPublicPosts($params = array()) {
-		return $this->httpGet($this->_baseUrl.'posts/stream/global?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'posts/stream/global?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -560,7 +505,7 @@ class AppDotNet {
 	 * @param integer $user_id The user ID to mute
 	 */
 	public function muteUser($user_id=null) {
-	 	return $this->httpPost($this->_baseUrl.'users/'.urlencode($user_id).'/mute');
+	 	return $this->httpReq('post',$this->_baseUrl.'users/'.urlencode($user_id).'/mute');
 	}   
 	
 	/**
@@ -568,7 +513,7 @@ class AppDotNet {
 	 * @param integer $user_id The user ID to unmute
 	 */
 	public function unmuteUser($user_id=null) {
-		return $this->httpDelete($this->_baseUrl.'users/'.urlencode($user_id).'/mute');
+		return $this->httpReq('delete',$this->_baseUrl.'users/'.urlencode($user_id).'/mute');
 	}       
 
 	/**
@@ -576,7 +521,7 @@ class AppDotNet {
 	 * @return array An array of associative arrays, each representing one muted user.
 	 */
 	public function getMuted() {
-		return $this->httpGet($this->_baseUrl.'users/me/muted');
+		return $this->httpReq('get',$this->_baseUrl.'users/me/muted');
 	}
 
 	/**
@@ -584,7 +529,7 @@ class AppDotNet {
 	* @param integer $post_id The post ID to star
 	*/
 	public function starPost($post_id=null) {
-		return $this->httpPost($this->_baseUrl.'posts/'.urlencode($post_id).'/star');
+		return $this->httpReq('post',$this->_baseUrl.'posts/'.urlencode($post_id).'/star');
 	}
 
 	/**
@@ -592,7 +537,7 @@ class AppDotNet {
 	* @param integer $post_id The post ID to unstar
 	*/
 	public function unstarPost($post_id=null) {
-		return $this->httpDelete($this->_baseUrl.'posts/'.urlencode($post_id).'/star');
+		return $this->httpReq('delete',$this->_baseUrl.'posts/'.urlencode($post_id).'/star');
 	}
 
 	/**
@@ -601,7 +546,7 @@ class AppDotNet {
 	* user who has starred a post
 	*/
 	public function getStarred($user_id='me') {
-		return $this->httpGet($this->_baseUrl.'users/'.urlencode($user_id).'/stars');
+		return $this->httpReq('get',$this->_baseUrl.'users/'.urlencode($user_id).'/stars');
 	}
 
 	/**
@@ -610,7 +555,7 @@ class AppDotNet {
 	* @return array An array of associative arrays, each representing one user.
 	*/
 	public function getStars($post_id=null) {
-		return $this->httpGet($this->_baseUrl.'posts/'.$post_id.'/stars');
+		return $this->httpReq('get',$this->_baseUrl.'posts/'.$post_id.'/stars');
 	}
 
 	public function getLastRequest() {
@@ -621,6 +566,5 @@ class AppDotNet {
 	}
 
 }
-
 
 class AppDotNetException extends Exception {}

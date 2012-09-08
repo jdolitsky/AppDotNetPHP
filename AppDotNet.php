@@ -377,10 +377,13 @@ class AppDotNet {
 	/**
 	 * Returns a specific Post.
 	 * @param integer $post_id The ID of the post to retrieve
+	 * @param array $params An associative array of optional general parameters. 
+	 * This will likely change as the API evolves, as of this writing allowed keys 
+	 * are: include_annoations.
 	 * @return array An associative array representing the post
 	 */
-	public function getPost($post_id=null) {
-		return $this->httpGet($this->_baseUrl.'posts/'.urlencode($post_id));
+	public function getPost($post_id=null,$params = array()) {
+		return $this->httpGet($this->_baseUrl.'posts/'.urlencode($post_id).'?'.$this->buildQueryString($params));
 	}
 
 	/**

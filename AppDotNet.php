@@ -319,7 +319,7 @@ class AppDotNet {
 	 * @param integer $post_id The ID of the post to retrieve
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are: include_annoations.
+	 * are: include_annotations.
 	 * @return array An associative array representing the post
 	 */
 	public function getPost($post_id=null,$params = array()) {
@@ -343,7 +343,7 @@ class AppDotNet {
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
 	 * are:	count, before_id, since_id, include_muted, include_deleted, 
-	 * include_directed_posts, and include_annoations.
+	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getPostReplies($post_id=null,$params = array()) {
@@ -360,7 +360,7 @@ class AppDotNet {
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
 	 * are:	count, before_id, since_id, include_muted, include_deleted, 
-	 * include_directed_posts, and include_annoations.
+	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserPosts($user_id='me', $params = array()) {
@@ -377,7 +377,7 @@ class AppDotNet {
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
 	 * are:	count, before_id, since_id, include_muted, include_deleted, 
-	 * include_directed_posts, and include_annoations.
+	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserMentions($user_id='me',$params = array()) {
@@ -391,7 +391,7 @@ class AppDotNet {
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
 	 * are:	count, before_id, since_id, include_muted, include_deleted, 
-	 * include_directed_posts, and include_annoations.
+	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserStream($params = array()) {
@@ -458,7 +458,7 @@ class AppDotNet {
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
 	 * are:	count, before_id, since_id, include_muted, include_deleted, 
-	 * include_directed_posts, and include_annoations.
+	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function searchHashtags($hashtag=null, $params = array()) {
@@ -472,7 +472,7 @@ class AppDotNet {
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
 	 * are:	count, before_id, since_id, include_muted, include_deleted, 
-	 * include_directed_posts, and include_annoations.
+	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getPublicPosts($params = array()) {

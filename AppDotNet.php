@@ -542,11 +542,17 @@ class AppDotNet {
 
 	/**
 	* List the posts starred by the current user
+	* @param array $params An associative array of optional general parameters. 
+	* This will likely change as the API evolves, as of this writing allowed keys 
+	* are:	count, before_id, since_id, include_muted, include_deleted, 
+	* include_directed_posts, and include_annotations.
+	* See https://github.com/appdotnet/api-spec/blob/master/resources/posts.md#general-parameters
 	* @return array An array of associative arrays, each representing a single 
 	* user who has starred a post
 	*/
-	public function getStarred($user_id='me') {
-		return $this->httpReq('get',$this->_baseUrl.'users/'.urlencode($user_id).'/stars');
+	public function getStarred($user_id='me', $params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'users/'.urlencode($user_id).'/stars'
+					.'?'.$this->buildQueryString($params));
 	}
 
 	/**

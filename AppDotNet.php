@@ -561,7 +561,7 @@ class AppDotNet {
 	* @return array An array of associative arrays, each representing one user.
 	*/
 	public function getStars($post_id=null) {
-		return $this->httpReq('get',$this->_baseUrl.'posts/'.$post_id.'/stars');
+		return $this->httpReq('get',$this->_baseUrl.'posts/'.urlencode($post_id).'/stars');
 	}
 
 	/**
@@ -571,7 +571,7 @@ class AppDotNet {
 	 * user who reposted $post_id
 	 */
 	public function getReposters($post_id){
-		return $this->httpReq('get',$this->_baseUrl.'posts/'.$post_id.'/reposters'); 
+		return $this->httpReq('get',$this->_baseUrl.'posts/'.urlencode($post_id).'/reposters'); 
 	}
 
 	/**
@@ -580,7 +580,7 @@ class AppDotNet {
 	 * @return not a clue
 	 */
 	public function repost($post_id){
-		return $this->httpReq('post',$this->_baseUrl.'posts/'.$post_id.'/repost');
+		return $this->httpReq('post',$this->_baseUrl.'posts/'.urlencode($post_id).'/repost');
 	}
 
 	/**
@@ -589,7 +589,7 @@ class AppDotNet {
 	 * @return not a clue
 	 */
 	public function deleteRepost($post_id){
-		return $this->httpReq('delete',$this->_baseUrl.'posts/'.$post_id.'/repost');
+		return $this->httpReq('delete',$this->_baseUrl.'posts/'.urlencode($post_id).'/repost');
 	}
 
 	public function getLastRequest() {

@@ -564,6 +564,34 @@ class AppDotNet {
 		return $this->httpReq('get',$this->_baseUrl.'posts/'.$post_id.'/stars');
 	}
 
+	/**
+	 * Returns an array of User objects of users who reposted the specified post.
+	 * @param integer $post_id the post ID to 
+	 * @return array An array of associative arrays, each representing a single 
+	 * user who reposted $post_id
+	 */
+	public function getReposters($post_id){
+		return $this->httpReq('get',$this->_baseUrl.'posts/'.$post_id.'/reposters'); 
+	}
+
+	/**
+	 * Repost an existing Post object.
+	 * @param integer $post_id The id of the post
+	 * @return not a clue
+	 */
+	public function repost($post_id){
+		return $this->httpReq('post',$this->_baseUrl.'posts/'.$post_id.'/repost');
+	}
+
+	/**
+	 * Delete a post that the user has reposted.
+	 * @param integer $post_id The id of the post
+	 * @return not a clue
+	 */
+	public function deleteRepost($post_id){
+		return $this->httpReq('delete',$this->_baseUrl.'posts/'.$post_id.'/repost');
+	}
+
 	public function getLastRequest() {
 		return $this->_last_request;
 	}

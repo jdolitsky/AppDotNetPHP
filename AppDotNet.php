@@ -592,6 +592,17 @@ class AppDotNet {
 		return $this->httpReq('delete',$this->_baseUrl.'posts/'.$post_id.'/repost');
 	}
 
+	/**
+	* List the users who match a specific search term
+	* @param string $search The search query. Supports @username or #tag searches as
+	* well as normal search terms. Searches username, display name, bio information.
+	* Does not search posts.
+	* @return array An array of associative arrays, each representing one user.
+	*/
+	public function searchUsers($search="") {
+		return $this->httpReq('get',$this->_baseUrl.'users/search?q='.urlencode($search));
+	}
+
 	public function getLastRequest() {
 		return $this->_last_request;
 	}

@@ -42,6 +42,9 @@ class AppDotNet {
 	private $_last_request = null;
 	private $_last_response = null;
 
+	// ssl certification
+	private $_sslCA = null;
+
 	/**
 	 * Constructs an AppDotNet PHP object with the specified client ID and 
 	 * client secret.
@@ -53,6 +56,12 @@ class AppDotNet {
 	public function __construct($client_id,$client_secret) {
 		$this->_clientId = $client_id;
 		$this->_clientSecret = $client_secret;
+
+		// if the digicert certificate exists in the same folder as this file,
+		// remember that fact for later
+		if (file_exists(dirname(__FILE__).'/DigiCertHighAssuranceEVRootCA.pem')) {
+			$this->_sslCA = dirname(__FILE__).'/DigiCertHighAssuranceEVRootCA.pem';
+		}
 	}
 
 	/**
@@ -242,9 +251,17 @@ class AppDotNet {
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLINFO_HEADER_OUT, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);
+		if ($this->_sslCA) {
+			curl_setopt($ch, CURLOPT_CAINFO, $this->_sslCA);
+		}
 		$this->_last_response = curl_exec($ch); 
 		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
 		curl_close($ch);
+		if ($this->_last_request===false) {
+			if (!curl_getinfo($ch,CURLINFO_SSL_VERIFYRESULT)) {
+				throw new AppDotNetException('SSL verification failed, connection terminated.');
+			}
+		}
 		$response = $this->parseHeaders($this->_last_response);
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {

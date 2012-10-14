@@ -136,6 +136,35 @@ class AppDotNet {
 	}
 
 	/**
+	 * Retrieve an app access token from the app.net API. This allows you
+	 * to access the API without going through the user access flow if you
+	 * just want to (eg) consume global. App access tokens are required for
+	 * some actions (like streaming global). DO NOT share the return value
+	 * of this function with any user (or save it in a cookie, etc). This
+	 * is considered secret info for your app only.
+	 * @return string The app access token
+	 */
+	public function getAppAccessToken() {
+
+		// construct the necessary elements to get a token
+		$data = array(
+			'client_id'=>$this->_clientId,
+			'client_secret'=>$this->_clientSecret,
+			'grant_type'=>'client_credentials',
+		);
+
+		// try and fetch the token with the above data
+		$res = $this->httpReq('post',$this->_authUrl.'access_token', $data);
+
+		// store it for later
+		$this->_accessToken = $res['access_token'];
+		$this->_username = null;
+		$this->_user_id = null;
+
+		return $this->_accessToken;
+	}
+
+	/**
 	 * Returns the total number of requests you're allowed within the 
 	 * alloted time period.
 	 * @see getRateLimitReset()

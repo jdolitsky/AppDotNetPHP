@@ -354,10 +354,14 @@ class AppDotNet {
 	 * by an associative array.
 	 * @return array An associative array representing the post.
 	 */
-	public function createPost($text=null, $data = array()) {
+	public function createPost($text=null, $data = array(), $params = array()) {
 		$data['text'] = $text;
 		$json = json_encode($data);
-		return $this->httpReq('post',$this->_baseUrl.'posts',$json,'application/json');
+		$qs = '';
+		if (!empty($params)) {
+			$qs = '?'.$this->buildQueryString($params);
+		}
+		return $this->httpReq('post',$this->_baseUrl.'posts'.$qs, $json, 'application/json');
 	}
 
 	/**

@@ -66,6 +66,9 @@ class AppDotNet {
 	// keeps track of the last time we've received a packet from the api, if it's too long we'll reconnect
 	private $_lastStreamActivity = null;
 
+	// stores the headers received when connecting to the stream
+	private $_streamHeaders = null;
+
 	/**
 	 * Constructs an AppDotNet PHP object with the specified client ID and 
 	 * client secret.
@@ -836,13 +839,22 @@ class AppDotNet {
 	public function httpStreamReceive($ch,$data) {
 		$this->_lastStreamActivity = time();
 		$this->_streamBuffer .= $data;
-		$pos = strpos($this->_streamBuffer,"\r\n");
-		if ($pos!==false) {
-			$command = substr($this->_streamBuffer,0,$pos);
-			$this->_streamBuffer = substr($this->_streamBuffer,$pos+4);
-			$command = json_decode($command,true);
-			if ($command && isset($command['meta']) && isset($command['meta']['type'])) {
-				call_user_func($this->_streamCallback,$command);
+		if (!$this->_streamHeaders) {
+			$pos = strpos($this->_streamBuffer,"\r\n\r\n");
+			if ($pos!==false) {
+				$this->_streamHeaders = substr($this->_streamBuffer,0,$pos);
+				$this->_streamBuffer = substr($this->_streamBuffer,$pos+4);
+			}
+		}
+		else {
+			$pos = strpos($this->_streamBuffer,"\r\n");
+			if ($pos!==false) {
+				$command = substr($this->_streamBuffer,0,$pos);
+				$this->_streamBuffer = substr($this->_streamBuffer,$pos+2);
+				$command = json_decode($command,true);
+				if ($command) {
+					call_user_func($this->_streamCallback,$command);
+				}
 			}
 		}
 		return strlen($data);
@@ -904,7 +916,7 @@ class AppDotNet {
 	 * returning. There are 1,000,000 microseconds in a second.
 	 * @return void
 	 */
-	public function processStream($microseconds=0) {
+	public function processStream($microseconds=null) {
 		if (!$this->_multiStream) {
 			throw new AppDotNetException('You must open a stream before calling processStream()');
 		}
@@ -925,9 +937,6 @@ class AppDotNet {
 					throw new AppDotNetException('Received HTTP error '.$httpCode.' check your URL and credentials before reconnecting');
 				}
 				$this->reconnectStream();
-			}
-			if ($microseconds<=0) {
-				return;
 			}
 			// sleep for a max of 2/10 of a second
 			$timeSoFar = (microtime(true)-$start)*1000000;

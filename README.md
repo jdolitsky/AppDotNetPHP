@@ -136,7 +136,7 @@ $stream = $app->createStream(array('post','star'));
 // when they're received from the stream. This function should accept one single
 // parameter that will be the php object containing the meta / data for the event.
 function handleEvent($event) {
-	switch ($event->meta->type) {
+	switch ($event['meta']['type']) {
 		case 'post':
 			print "Handle a post type\n";
 			break;

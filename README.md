@@ -113,3 +113,55 @@ $app->createPost('Hello world');
 
 ?>
 ```
+
+To consume the stream, try something like:
+```php
+<?php
+
+require_once 'AppDotNet.php';
+$app = new AppDotNet($clientId,$clientSecret);
+
+// You need an app token to consume the stream, get the token returned by App.net
+// (this also sets the token)
+$token = $app->getAppAccessToken();
+
+// create a stream
+// if you already have a stream you can skip this step
+// this stream is going to consume posts and stars (but not follows)
+$stream = $app->createStream(array('post','star'));
+// you might want to save $stream['endpoint'] or $stream['id'] for later so 
+// you don't have to re-create the stream
+
+// we need to create a callback function that will do something with posts/stars
+// when they're received from the stream. This function should accept one single
+// parameter that will be the php object containing the meta / data for the event.
+function handleEvent($event) {
+	switch ($event->meta->type) {
+		case 'post':
+			print "Handle a post type\n";
+			break;
+		case 'star':
+			print "Handle a star type\n";
+			break;
+	}
+}
+
+// register that function as the stream handler
+$app->registerStreamFunction('handleEvent');
+
+// open the stream for reading
+$app->openStream($stream['endpoint']);
+
+// now we want to process the stream. We have two options. If all we're doing
+// in this script is processing the stream, we can just call:
+// $app->processStreamForever();
+// otherwise you can create a loop, and call $app->processStream($milliseconds) 
+// intermittently, like:
+while (true) {
+	print "hello, I'm going to do some other non-streaming things here...\n";
+	// now we're going to process the stream for awhile (3 seconds)
+	$app->processStream(3000000);
+	// then do something else...
+}
+?>
+```

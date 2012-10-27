@@ -824,6 +824,10 @@ class AppDotNet {
 	 * @return true;
 	 */
 	public function closeStream() {
+		if (!$this->_lastStreamActivity) {
+			// never opened
+			return;
+		}
 		if (!$this->_multiStream) {
 			throw new AppDotNetException('You must open a stream before calling closeStream()');
 		}

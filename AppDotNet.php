@@ -449,12 +449,18 @@ class AppDotNet {
 	 * will likely change as the API evolves, as of this writing allowed keys are:
 	 * reply_to, and annotations. "annotations" may be a complex object represented
 	 * by an associative array.
+	 * @param array $params An associative array of optional data to be included
+         * in the URL (such as 'include_anontations' and 'include_machine')
 	 * @return array An associative array representing the post.
 	 */
-	public function createPost($text=null, $data = array()) {
+	public function createPost($text=null, $data = array(), $params = array()) {
 		$data['text'] = $text;
 		$json = json_encode($data);
-		return $this->httpReq('post',$this->_baseUrl.'posts',$json,'application/json');
+		$qs = '';
+		if (!empty($params)) {
+			$qs = '?'.$this->buildQueryString($params);
+		}
+		return $this->httpReq('post',$this->_baseUrl.'posts'.$qs, $json, 'application/json');
 	}
 
 	/**

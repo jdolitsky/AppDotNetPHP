@@ -782,7 +782,7 @@ class AppDotNet {
 	* @param string $name the @name to get
 	* @return array representing one user
 	*/
-	public function getId($name=null) {
+	public function getUserByName($name=null) {
 		return $this->httpReq('get',$this->_baseUrl.'users/@'.$name);
 	}
 

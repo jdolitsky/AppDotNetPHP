@@ -7,8 +7,8 @@
  * This class handles a lower level type of access to App.net. It's ideal
  * for command line scripts and other places where you want full control
  * over what's happening, and you're at least a little familiar with oAuth.
- * 
- * Alternatively you can use the EZAppDotNet class which automatically takes 
+ *
+ * Alternatively you can use the EZAppDotNet class which automatically takes
  * care of a lot of the details like logging in, keeping track of tokens,
  * etc. EZAppDotNet assumes you're accessing App.net via a browser, whereas
  * this class tries to make no assumptions at all.
@@ -69,12 +69,23 @@ class AppDotNet {
 	// stores the headers received when connecting to the stream
 	private $_streamHeaders = null;
 
+	// response meta max_id data
+	private $_maxid = null;
+
+	// response meta min_id data
+	private $_minid = null;
+
+	// response meta more data
+	private $_more = null;
+
+	// strip envelope response from returned value
+	private $_stripResponseEnvelope=true;
 	/**
-	 * Constructs an AppDotNet PHP object with the specified client ID and 
+	 * Constructs an AppDotNet PHP object with the specified client ID and
 	 * client secret.
-	 * @param string $client_id The client ID you received from App.net when 
+	 * @param string $client_id The client ID you received from App.net when
 	 * creating your app.
-	 * @param string $client_secret The client secret you received from 
+	 * @param string $client_secret The client secret you received from
 	 * App.net when creating your app.
 	 */
 	public function __construct($client_id,$client_secret) {
@@ -86,6 +97,17 @@ class AppDotNet {
 		if (file_exists(dirname(__FILE__).'/DigiCertHighAssuranceEVRootCA.pem')) {
 			$this->_sslCA = dirname(__FILE__).'/DigiCertHighAssuranceEVRootCA.pem';
 		}
+	}
+
+	/**
+	 * Set whether or not to strip Envelopse Response (meta) information
+	 * This option will be deprecated in the future. Is it to allow
+	 * a migration path between code expecting the old behavior
+	 * and new behavior. When not stripped, you still can use the proper
+	 * method to pull the meta information. Please start converting your code ASAP
+	 */
+	public function includeResponseEnvelope() {
+		$this->_stripResponseEnvelope=false;
 	}
 
 	/**
@@ -119,12 +141,12 @@ class AppDotNet {
 	}
 
 	/**
-	 * Call this after they return from the auth page, or anytime you need the 
-	 * token. For example, you could store it in a database and use 
+	 * Call this after they return from the auth page, or anytime you need the
+	 * token. For example, you could store it in a database and use
 	 * setAccessToken() later on to return on behalf of the user.
 	 */
 	public function getAccessToken($callback_uri) {
-		// if there's no access token set, and they're returning from 
+		// if there's no access token set, and they're returning from
 		// the auth page with a code, use the code to get a token
 		if (!$this->_accessToken && isset($_GET['code']) && $_GET['code']) {
 
@@ -152,7 +174,7 @@ class AppDotNet {
 
 	/**
 	 * Set the access token (eg: after retrieving it from offline storage)
-	 * @param string $token A valid access token you're previously received 
+	 * @param string $token A valid access token you're previously received
 	 * from calling getAccessToken().
 	 */
 	public function setAccessToken($token) {
@@ -189,7 +211,7 @@ class AppDotNet {
 	}
 
 	/**
-	 * Returns the total number of requests you're allowed within the 
+	 * Returns the total number of requests you're allowed within the
 	 * alloted time period.
 	 * @see getRateLimitReset()
 	 */
@@ -250,7 +272,7 @@ class AppDotNet {
 					break;
 				case 'X-RateLimit-Limit':
 					$this->rateLimit = $v;
-					break; 
+					break;
 				case 'X-RateLimit-Reset':
 					$this->rateLimitReset = $v;
 					break;
@@ -260,7 +282,7 @@ class AppDotNet {
 		return $content;
 	}
 
-	/** 
+	/**
 	 * Internal function. Used to turn things like TRUE into 1, and then
 	 * calls http_build_query.
 	 */
@@ -277,13 +299,13 @@ class AppDotNet {
 		return http_build_query($array);
 	}
 
-	
-	/** 
-	 * Internal function to handle all 
+
+	/**
+	 * Internal function to handle all
 	 * HTTP requests (POST,GET,DELETE)
 	 */
 	protected function httpReq($act, $req, $params=array(),$contentType='application/x-www-form-urlencoded') {
-		$ch = curl_init($req); 
+		$ch = curl_init($req);
 		$headers = array();
 		if($act == 'post' || $act == 'delete') {
 			curl_setopt($ch, CURLOPT_POST, true);
@@ -307,7 +329,7 @@ class AppDotNet {
 		if ($this->_sslCA) {
 			curl_setopt($ch, CURLOPT_CAINFO, $this->_sslCA);
 		}
-		$this->_last_response = curl_exec($ch); 
+		$this->_last_response = curl_exec($ch);
 		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
 		$http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
@@ -324,7 +346,14 @@ class AppDotNet {
 		}
 		$response = $this->parseHeaders($this->_last_response);
 		$response = json_decode($response,true);
-		
+
+		if (isset($response['meta'])) {
+			$this->_maxid=$response['meta']['max_id'];
+			$this->_minid=$response['meta']['min_id'];
+			$this->_more=$response['meta']['more'];
+		}
+
+
 		// look for errors
 		if (isset($response['error'])) {
 			if (is_array($response['error'])) {
@@ -334,7 +363,7 @@ class AppDotNet {
 			else {
 				throw new AppDotNetException($response['error']);
 			}
-		} 
+		}
 
 		// look for response migration errors
 		elseif (isset($response['meta']) && isset($response['meta']['error_message'])) {
@@ -342,7 +371,7 @@ class AppDotNet {
 		}
 
 		// if we've received a migration response, handle it and return data only
-		elseif (isset($response['meta']) && isset($response['data'])) {
+		elseif ($this->_stripResponseEnvelope && isset($response['meta']) && isset($response['data'])) {
 			return $response['data'];
 		}
 
@@ -350,6 +379,28 @@ class AppDotNet {
 		else {
 			return $response;
 		}
+	}
+
+
+	/**
+	 * Get max_id from last meta response data envelope
+	 */
+	public function getResponseMaxID() {
+		return $this->_maxid;
+	}
+
+	/**
+	 * Get min_id from last meta response data envelope
+	 */
+	public function getResponseMinID() {
+		return $this->_minid;
+	}
+
+	/**
+	 * Get more from last meta response data envelope
+	 */
+	public function getResponseMore() {
+		return $this->_more;
 	}
 
 	/**
@@ -381,7 +432,7 @@ class AppDotNet {
 	}
 
 	/**
-	 * Delete a Filter. The Filter must belong to the current User. 
+	 * Delete a Filter. The Filter must belong to the current User.
 	 * @return object Returns the deleted Filter on success.
 	 */
 	public function deleteFilter($filter_id=null) {
@@ -389,9 +440,9 @@ class AppDotNet {
 	}
 
 	/**
-	 * Create a new Post object. Mentions and hashtags will be parsed out of the 
-	 * post text, as will bare URLs. To create a link in a post without using a 
-	 * bare URL, include the anchor text in the post's text and include a link 
+	 * Create a new Post object. Mentions and hashtags will be parsed out of the
+	 * post text, as will bare URLs. To create a link in a post without using a
+	 * bare URL, include the anchor text in the post's text and include a link
 	 * entity in the post creation call.
 	 * @param string $text The text of the post
 	 * @param array $data An associative array of optional post data. This
@@ -409,8 +460,8 @@ class AppDotNet {
 	/**
 	 * Returns a specific Post.
 	 * @param integer $post_id The ID of the post to retrieve
-	 * @param array $params An associative array of optional general parameters. 
-	 * This will likely change as the API evolves, as of this writing allowed keys 
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
 	 * are: include_annotations.
 	 * @return array An associative array representing the post
 	 */
@@ -420,7 +471,7 @@ class AppDotNet {
 	}
 
 	/**
-	 * Delete a Post. The current user must be the same user who created the Post. 
+	 * Delete a Post. The current user must be the same user who created the Post.
 	 * It returns the deleted Post on success.
 	 * @param integer $post_id The ID of the post to delete
 	 * @param array An associative array representing the post that was deleted
@@ -432,9 +483,9 @@ class AppDotNet {
 	/**
 	 * Retrieve the Posts that are 'in reply to' a specific Post.
 	 * @param integer $post_id The ID of the post you want to retrieve replies for.
-	 * @param array $params An associative array of optional general parameters. 
-	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are:	count, before_id, since_id, include_muted, include_deleted,
 	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
@@ -444,14 +495,14 @@ class AppDotNet {
 	}
 
 	/**
-	 * Get the most recent Posts created by a specific User in reverse 
+	 * Get the most recent Posts created by a specific User in reverse
 	 * chronological order (most recent first).
 	 * @param mixed $user_id Either the ID of the user you wish to retrieve posts by,
 	 * or the string "me", which will retrieve posts for the user you're authenticated
 	 * as.
-	 * @param array $params An associative array of optional general parameters. 
-	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are:	count, before_id, since_id, include_muted, include_deleted,
 	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
@@ -459,16 +510,16 @@ class AppDotNet {
 		return $this->httpReq('get',$this->_baseUrl.'users/'.urlencode($user_id)
 					.'/posts?'.$this->buildQueryString($params));
 	}
-	
+
 	/**
-	 * Get the most recent Posts mentioning by a specific User in reverse 
+	 * Get the most recent Posts mentioning by a specific User in reverse
 	 * chronological order (newest first).
-	 * @param mixed $user_id Either the ID of the user who is being mentioned, or 
+	 * @param mixed $user_id Either the ID of the user who is being mentioned, or
 	 * the string "me", which will retrieve posts for the user you're authenticated
 	 * as.
-	 * @param array $params An associative array of optional general parameters. 
-	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are:	count, before_id, since_id, include_muted, include_deleted,
 	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
@@ -478,11 +529,11 @@ class AppDotNet {
 	}
 
 	/**
-	 * Return the 20 most recent posts from the current User and 
+	 * Return the 20 most recent posts from the current User and
 	 * the Users they follow.
-	 * @param array $params An associative array of optional general parameters. 
-	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are:	count, before_id, since_id, include_muted, include_deleted,
 	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
@@ -522,22 +573,22 @@ class AppDotNet {
 
 	/**
 	 * Returns an array of User objects the specified user is following.
-	 * @param mixed $user_id Either the ID of the user being followed, or 
+	 * @param mixed $user_id Either the ID of the user being followed, or
 	 * the string "me", which will retrieve posts for the user you're authenticated
 	 * as.
-	 * @return array An array of associative arrays, each representing a single 
+	 * @return array An array of associative arrays, each representing a single
 	 * user following $user_id
 	 */
 	public function getFollowing($user_id='me') {
 		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/following');
 	}
-	
+
 	/**
 	 * Returns an array of User objects for users following the specified user.
-	 * @param mixed $user_id Either the ID of the user being followed, or 
+	 * @param mixed $user_id Either the ID of the user being followed, or
 	 * the string "me", which will retrieve posts for the user you're authenticated
 	 * as.
-	 * @return array An array of associative arrays, each representing a single 
+	 * @return array An array of associative arrays, each representing a single
 	 * user following $user_id
 	 */
 	public function getFollowers($user_id='me') {
@@ -547,9 +598,9 @@ class AppDotNet {
 	/**
 	 * Return Posts matching a specific #hashtag.
 	 * @param string $hashtag The hashtag you're looking for.
-	 * @param array $params An associative array of optional general parameters. 
-	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are:	count, before_id, since_id, include_muted, include_deleted,
 	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
@@ -561,9 +612,9 @@ class AppDotNet {
 	/**
 	 * Retrieve a list of all public Posts on App.net, often referred to as the
 	 * global stream.
-	 * @param array $params An associative array of optional general parameters. 
-	 * This will likely change as the API evolves, as of this writing allowed keys 
-	 * are:	count, before_id, since_id, include_muted, include_deleted, 
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are:	count, before_id, since_id, include_muted, include_deleted,
 	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
@@ -579,34 +630,34 @@ class AppDotNet {
 	 * @return integer The user's user ID
 	 */
 	public function getIdByUsername($username=null) {
-		$ch = curl_init('https://alpha.app.net/'.urlencode(strtolower($username))); 
+		$ch = curl_init('https://alpha.app.net/'.urlencode(strtolower($username)));
 		curl_setopt($ch, CURLOPT_POST, false);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch,CURLOPT_USERAGENT,
 			'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:7.0.1) Gecko/20100101 Firefox/7.0.1');
-		$response = curl_exec($ch); 
+		$response = curl_exec($ch);
 		curl_close($ch);
 		$temp = explode('title="User Id ',$response);
 		$temp2 = explode('"',$temp[1]);
 		$user_id = $temp2[0];
 		return $user_id;
 	}
-	
+
 	/**
 	 * Mute a user
 	 * @param integer $user_id The user ID to mute
 	 */
 	public function muteUser($user_id=null) {
 	 	return $this->httpReq('post',$this->_baseUrl.'users/'.urlencode($user_id).'/mute');
-	}   
-	
+	}
+
 	/**
 	 * Unmute a user
 	 * @param integer $user_id The user ID to unmute
 	 */
 	public function unmuteUser($user_id=null) {
 		return $this->httpReq('delete',$this->_baseUrl.'users/'.urlencode($user_id).'/mute');
-	}       
+	}
 
 	/**
 	 * List the users muted by the current user
@@ -634,12 +685,12 @@ class AppDotNet {
 
 	/**
 	* List the posts starred by the current user
-	* @param array $params An associative array of optional general parameters. 
-	* This will likely change as the API evolves, as of this writing allowed keys 
-	* are:	count, before_id, since_id, include_muted, include_deleted, 
+	* @param array $params An associative array of optional general parameters.
+	* This will likely change as the API evolves, as of this writing allowed keys
+	* are:	count, before_id, since_id, include_muted, include_deleted,
 	* include_directed_posts, and include_annotations.
 	* See https://github.com/appdotnet/api-spec/blob/master/resources/posts.md#general-parameters
-	* @return array An array of associative arrays, each representing a single 
+	* @return array An array of associative arrays, each representing a single
 	* user who has starred a post
 	*/
 	public function getStarred($user_id='me', $params = array()) {
@@ -658,12 +709,12 @@ class AppDotNet {
 
 	/**
 	 * Returns an array of User objects of users who reposted the specified post.
-	 * @param integer $post_id the post ID to 
-	 * @return array An array of associative arrays, each representing a single 
+	 * @param integer $post_id the post ID to
+	 * @return array An array of associative arrays, each representing a single
 	 * user who reposted $post_id
 	 */
 	public function getReposters($post_id){
-		return $this->httpReq('get',$this->_baseUrl.'posts/'.urlencode($post_id).'/reposters'); 
+		return $this->httpReq('get',$this->_baseUrl.'posts/'.urlencode($post_id).'/reposters');
 	}
 
 	/**
@@ -724,19 +775,19 @@ class AppDotNet {
 	 * your current access token. If you pass a stream ID, the library will
 	 * make an API call to get the endpoint.
 	 *
-	 * This function will return immediately, but your callback functions 
+	 * This function will return immediately, but your callback functions
 	 * will continue to receive events until you call closeStream() or until
 	 * App.net terminates the stream from their end with an error.
 	 *
-	 * If you're disconnected due to a network error, the library will 
+	 * If you're disconnected due to a network error, the library will
 	 * automatically attempt to reconnect you to the same stream, no action
 	 * on your part is necessary for this. However if the app.net API returns
 	 * an error, a reconnection attempt will not be made.
-	 * 
-	 * Note there is no closeStream, because once you open a stream you 
+	 *
+	 * Note there is no closeStream, because once you open a stream you
 	 * can't stop it (unless you exit() or die() or throw an uncaught
 	 * exception, or something else that terminates the script).
-	 * @return boolean True 
+	 * @return boolean True
 	 * @see createStream()
 	 */
 	public function openStream($stream) {
@@ -799,7 +850,7 @@ class AppDotNet {
 	 * @param array $objectTypes The objects you want to retrieve data for from the
 	 * stream. At time of writing these can be 'post', 'star', and/or 'user_follow'.
 	 * If you don't specify, all events will be retrieved.
-	 */	 
+	 */
 	public function createStream($objectTypes=null) {
 		// default object types to everything
 		if (is_null($objectTypes)) {
@@ -864,7 +915,7 @@ class AppDotNet {
 	 * Opens a long lived HTTP connection to the app.net servers, and sends data
 	 * received to the httpStreamReceive function. As a general rule you should not
 	 * directly call this method, it's used by openStream().
-	 */ 
+	 */
 	protected function httpStream($act, $req, $params=array(),$contentType='application/x-www-form-urlencoded') {
 		if ($this->_currentStream) {
 			throw new AppDotNetException('There is already an open stream, you must close the existing one before opening a new one');
@@ -874,7 +925,7 @@ class AppDotNet {
 		if ($this->_accessToken) {
 			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
 		}
-		$this->_currentStream = curl_init($req); 
+		$this->_currentStream = curl_init($req);
 		curl_setopt($this->_currentStream, CURLOPT_HTTPHEADER, $headers);
 		curl_setopt($this->_currentStream, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($this->_currentStream, CURLINFO_HEADER_OUT, true);
@@ -910,9 +961,9 @@ class AppDotNet {
 
 	/**
 	 * Process an open stream for x microseconds, then return. This is useful if you want
-	 * to be doing other things while processing the stream. If you just want to 
+	 * to be doing other things while processing the stream. If you just want to
 	 * consume the stream without other actions, you can call processForever() instead.
-	 * @param float @microseconds The number of microseconds to process for before 
+	 * @param float @microseconds The number of microseconds to process for before
 	 * returning. There are 1,000,000 microseconds in a second.
 	 * @return void
 	 */
@@ -952,7 +1003,7 @@ class AppDotNet {
 	}
 
 	/**
-	 * Process an open stream forever. This function will never return, if you 
+	 * Process an open stream forever. This function will never return, if you
 	 * want to perform other actions while consuming the stream, you should use
 	 * processFor() instead.
 	 * @return void This function will never return

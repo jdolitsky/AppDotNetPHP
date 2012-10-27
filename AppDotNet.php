@@ -641,7 +641,7 @@ class AppDotNet {
 	 */
 	public function getIdByUsername($username=null) {
 		if ($this->_accessToken) {
-			$res=$this->httpReq('get',$this->_baseUrl.'users/@'.$name);
+			$res=$this->httpReq('get',$this->_baseUrl.'users/@'.$username);
 			$user_id=$res['data']['id'];
 		} else {
 			$ch = curl_init('https://alpha.app.net/'.urlencode(strtolower($username)));

@@ -15,8 +15,8 @@
  */
 class AppDotNet {
 
-	private $_baseUrl = 'https://alpha-api.app.net/stream/0/';
-	private $_authUrl = 'https://alpha.app.net/oauth/';
+	protected $_baseUrl = 'https://alpha-api.app.net/stream/0/';
+	protected $_authUrl = 'https://alpha.app.net/oauth/';
 
 	private $_authPostParams=array();
 
@@ -45,6 +45,41 @@ class AppDotNet {
 	// ssl certification
 	private $_sslCA = null;
 
+	// the callback function to be called when an event is received from the stream
+	private $_streamCallback = null;
+
+	// the stream buffer
+	private $_streamBuffer = '';
+
+	// stores the curl handler for the current stream
+	private $_currentStream = null;
+
+	// stores the curl multi handler for the current stream
+	private $_multiStream = null;
+
+	// stores the number of failed connects, so we can back off multiple failures
+	private $_connectFailCounter = 0;
+
+	// stores the most recent stream url, so we can re-connect when needed
+	private $_streamUrl = null;
+
+	// keeps track of the last time we've received a packet from the api, if it's too long we'll reconnect
+	private $_lastStreamActivity = null;
+
+	// stores the headers received when connecting to the stream
+	private $_streamHeaders = null;
+
+	// response meta max_id data
+	private $_maxid = null;
+
+	// response meta min_id data
+	private $_minid = null;
+
+	// response meta more data
+	private $_more = null;
+
+	// strip envelope response from returned value
+	private $_stripResponseEnvelope=true;
 	/**
 	 * Constructs an AppDotNet PHP object with the specified client ID and
 	 * client secret.
@@ -62,6 +97,17 @@ class AppDotNet {
 		if (file_exists(dirname(__FILE__).'/DigiCertHighAssuranceEVRootCA.pem')) {
 			$this->_sslCA = dirname(__FILE__).'/DigiCertHighAssuranceEVRootCA.pem';
 		}
+	}
+
+	/**
+	 * Set whether or not to strip Envelopse Response (meta) information
+	 * This option will be deprecated in the future. Is it to allow
+	 * a migration path between code expecting the old behavior
+	 * and new behavior. When not stripped, you still can use the proper
+	 * method to pull the meta information. Please start converting your code ASAP
+	 */
+	public function includeResponseEnvelope() {
+		$this->_stripResponseEnvelope=false;
 	}
 
 	/**
@@ -288,7 +334,14 @@ class AppDotNet {
 		}
 		$this->_last_response = curl_exec($ch);
 		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
+		$http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
+		if ($http_status==0) {
+			throw new AppDotNetException('Unable to connect to '.$req);
+		}
+		if ($http_status<200 || $http_status>=300) {
+			throw new AppDotNetException('HTTP error '.$http_status);
+		}
 		if ($this->_last_request===false) {
 			if (!curl_getinfo($ch,CURLINFO_SSL_VERIFYRESULT)) {
 				throw new AppDotNetException('SSL verification failed, connection terminated.');
@@ -296,6 +349,15 @@ class AppDotNet {
 		}
 		$response = $this->parseHeaders($this->_last_response);
 		$response = json_decode($response,true);
+
+		if (isset($response['meta'])) {
+			$this->_maxid=$response['meta']['max_id'];
+			$this->_minid=$response['meta']['min_id'];
+			$this->_more=$response['meta']['more'];
+		}
+
+
+		// look for errors
 		if (isset($response['error'])) {
 			if (is_array($response['error'])) {
 				throw new AppDotNetException($response['error']['message'],
@@ -304,9 +366,44 @@ class AppDotNet {
 			else {
 				throw new AppDotNetException($response['error']);
 			}
-		} else {
+		}
+
+		// look for response migration errors
+		elseif (isset($response['meta']) && isset($response['meta']['error_message'])) {
+			throw new AppDotNetException($response['meta']['error_message'],$response['meta']['code']);
+		}
+
+		// if we've received a migration response, handle it and return data only
+		elseif ($this->_stripResponseEnvelope && isset($response['meta']) && isset($response['data'])) {
+			return $response['data'];
+		}
+
+		// else non response migration response, just return it
+		else {
 			return $response;
 		}
+	}
+
+
+	/**
+	 * Get max_id from last meta response data envelope
+	 */
+	public function getResponseMaxID() {
+		return $this->_maxid;
+	}
+
+	/**
+	 * Get min_id from last meta response data envelope
+	 */
+	public function getResponseMinID() {
+		return $this->_minid;
+	}
+
+	/**
+	 * Get more from last meta response data envelope
+	 */
+	public function getResponseMore() {
+		return $this->_more;
 	}
 
 	/**
@@ -707,6 +804,272 @@ class AppDotNet {
 	}
 	public function getLastResponse() {
 		return $this->_last_response;
+	}
+
+	/**
+	 * Registers your function (or an array of object and method) to be called
+	 * whenever an event is received via an open app.net stream. Your function
+	 * will receive a single parameter, which is the object wrapper containing
+	 * the meta and data.
+	 * @param mixed A PHP callback (either a string containing the function name,
+	 * or an array where the first element is the class/object and the second
+	 * is the method).
+	 */
+	public function registerStreamFunction($function) {
+		$this->_streamCallback = $function;
+	}
+
+	/**
+	 * Opens a stream that's been created for this user/app and starts sending
+	 * events/objects to your defined callback functions. You must define at
+	 * least one callback function before opening a stream.
+	 * @param mixed $stream Either a stream ID or the endpoint of a stream
+	 * you've already created. This stream must exist and must be valid for
+	 * your current access token. If you pass a stream ID, the library will
+	 * make an API call to get the endpoint.
+	 *
+	 * This function will return immediately, but your callback functions
+	 * will continue to receive events until you call closeStream() or until
+	 * App.net terminates the stream from their end with an error.
+	 *
+	 * If you're disconnected due to a network error, the library will
+	 * automatically attempt to reconnect you to the same stream, no action
+	 * on your part is necessary for this. However if the app.net API returns
+	 * an error, a reconnection attempt will not be made.
+	 *
+	 * Note there is no closeStream, because once you open a stream you
+	 * can't stop it (unless you exit() or die() or throw an uncaught
+	 * exception, or something else that terminates the script).
+	 * @return boolean True
+	 * @see createStream()
+	 */
+	public function openStream($stream) {
+		// if there's already a stream running, don't allow another
+		if ($this->_currentStream) {
+			throw new AppDotNetException('There is already a stream being consumed, only one stream can be consumed per AppDotNetStream instance');
+		}
+		// must register a callback (or the exercise is pointless)
+		if (!$this->_streamCallback) {
+			throw new AppDotNetException('You must define your callback function using registerStreamFunction() before calling openStream');
+		}
+		// if the stream is a numeric value, get the stream info from the api
+		if (is_numeric($stream)) {
+			$stream = $this->getStream($stream);
+			$this->_streamUrl = $stream['endpoint'];
+		}
+		else {
+			$this->_streamUrl = $stream;
+		}
+		// continue doing this until we get an error back or something...?
+		$this->httpStream('get',$this->_streamUrl);
+
+		return true;
+	}
+
+	/**
+	 * Close the currently open stream.
+	 * @return true;
+	 */
+	public function closeStream() {
+		if (!$this->_lastStreamActivity) {
+			// never opened
+			return;
+		}
+		if (!$this->_multiStream) {
+			throw new AppDotNetException('You must open a stream before calling closeStream()');
+		}
+		curl_close($this->_currentStream);
+		curl_multi_remove_handle($this->_multiStream,$this->_currentStream);
+		curl_multi_close($this->_multiStream);
+		$this->_currentStream = null;
+		$this->_multiStream = null;
+	}
+
+	/**
+	 * Retrieve all streams for the current access token.
+	 * @return array An array of stream definitions.
+	 */
+	public function getAllStreams() {
+		return $this->httpReq('get',$this->_baseUrl.'streams');
+	}
+
+	/**
+	 * Returns a single stream specified by a stream ID. The stream must have been
+	 * created with the current access token.
+	 * @return array A stream definition
+	 */
+	public function getStream($streamId) {
+		return $this->httpReq('get',$this->_baseUrl.'streams/'.urlencode($streamId));
+	}
+
+	/**
+	 * Creates a stream for the current access token.
+	 * @param array $objectTypes The objects you want to retrieve data for from the
+	 * stream. At time of writing these can be 'post', 'star', and/or 'user_follow'.
+	 * If you don't specify, all events will be retrieved.
+	 */
+	public function createStream($objectTypes=null) {
+		// default object types to everything
+		if (is_null($objectTypes)) {
+			$objectTypes = array('post','star','user_follow');
+		}
+		$data = array(
+			'object_types'=>$objectTypes,
+			'type'=>'long_poll',
+		);
+		$data = json_encode($data);
+		$response = $this->httpReq('post',$this->_baseUrl.'streams',$data,'application/json');
+		return $response;
+	}
+
+	/**
+	 * Deletes a stream if you no longer need it.
+	 * @param integer $streamId The stream ID to delete. This stream must have been
+	 * created by the current access token.
+	 */
+	public function deleteStream($streamId) {
+		return $this->httpReq('delete',$this->_baseUrl.'streams'.urlencode($streamId));
+	}
+
+	/**
+	 * Deletes all streams created by the current access token.
+	 */
+	public function deleteAllStreams() {
+		return $this->httpReq('delete',$this->_baseUrl.'streams');
+	}
+
+	/**
+	 * Internal function used to process incoming chunks from the stream. This is only
+	 * public because it needs to be accessed by CURL. Do not call or use this function
+	 * in your own code.
+	 * @ignore
+	 */
+	public function httpStreamReceive($ch,$data) {
+		$this->_lastStreamActivity = time();
+		$this->_streamBuffer .= $data;
+		if (!$this->_streamHeaders) {
+			$pos = strpos($this->_streamBuffer,"\r\n\r\n");
+			if ($pos!==false) {
+				$this->_streamHeaders = substr($this->_streamBuffer,0,$pos);
+				$this->_streamBuffer = substr($this->_streamBuffer,$pos+4);
+			}
+		}
+		else {
+			$pos = strpos($this->_streamBuffer,"\r\n");
+			if ($pos!==false) {
+				$command = substr($this->_streamBuffer,0,$pos);
+				$this->_streamBuffer = substr($this->_streamBuffer,$pos+2);
+				$command = json_decode($command,true);
+				if ($command) {
+					call_user_func($this->_streamCallback,$command);
+				}
+			}
+		}
+		return strlen($data);
+	}
+
+	/**
+	 * Opens a long lived HTTP connection to the app.net servers, and sends data
+	 * received to the httpStreamReceive function. As a general rule you should not
+	 * directly call this method, it's used by openStream().
+	 */
+	protected function httpStream($act, $req, $params=array(),$contentType='application/x-www-form-urlencoded') {
+		if ($this->_currentStream) {
+			throw new AppDotNetException('There is already an open stream, you must close the existing one before opening a new one');
+		}
+		$headers = array();
+		$this->_streamBuffer = '';
+		if ($this->_accessToken) {
+			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
+		}
+		$this->_currentStream = curl_init($req);
+		curl_setopt($this->_currentStream, CURLOPT_HTTPHEADER, $headers);
+		curl_setopt($this->_currentStream, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($this->_currentStream, CURLINFO_HEADER_OUT, true);
+		curl_setopt($this->_currentStream, CURLOPT_HEADER, true);
+		if ($this->_sslCA) {
+			curl_setopt($this->_currentStream, CURLOPT_CAINFO, $this->_sslCA);
+		}
+		// every time we receive a chunk of data, forward it to httpStreamReceive
+		curl_setopt($this->_currentStream, CURLOPT_WRITEFUNCTION, array($this, "httpStreamReceive"));
+
+		// curl_exec($ch);
+		// return;
+
+		$this->_multiStream = curl_multi_init();
+		$this->_lastStreamActivity = time();
+		curl_multi_add_handle($this->_multiStream,$this->_currentStream);
+	}
+
+	public function reconnectStream() {
+		$this->closeStream();
+		$this->_connectFailCounter++;
+		// if we've failed a few times, back off
+		if ($this->_connectFailCounter>1) {
+			$sleepTime = pow(2,$this->_connectFailCounter);
+			// don't sleep more than 60 seconds
+			if ($sleepTime>60) {
+				$sleepTime = 60;
+			}
+			sleep($sleepTime);
+		}
+		$this->httpStream('get',$this->_streamUrl);
+	}
+
+	/**
+	 * Process an open stream for x microseconds, then return. This is useful if you want
+	 * to be doing other things while processing the stream. If you just want to
+	 * consume the stream without other actions, you can call processForever() instead.
+	 * @param float @microseconds The number of microseconds to process for before
+	 * returning. There are 1,000,000 microseconds in a second.
+	 * @return void
+	 */
+	public function processStream($microseconds=null) {
+		if (!$this->_multiStream) {
+			throw new AppDotNetException('You must open a stream before calling processStream()');
+		}
+		$start = microtime(true);
+		$active = null;
+		$inQueue = null;
+		$sleepFor = 0;
+		do {
+			// if we haven't received anything within 30 seconds, reconnect
+			if (time()-$this->_lastStreamActivity>=30) {
+				$this->reconnectStream();
+			}
+			curl_multi_exec($this->_multiStream, $active);
+			if (!$active) {
+				$httpCode = curl_getinfo($this->_currentStream,CURLINFO_HTTP_CODE);
+				// don't reconnect on 400 errors
+				if ($httpCode>=400 && $httpCode<=499) {
+					throw new AppDotNetException('Received HTTP error '.$httpCode.' check your URL and credentials before reconnecting');
+				}
+				$this->reconnectStream();
+			}
+			// sleep for a max of 2/10 of a second
+			$timeSoFar = (microtime(true)-$start)*1000000;
+			$sleepFor = 200000;
+			if ($timeSoFar+$sleepFor>$microseconds) {
+				$sleepFor = $microseconds - $timeSoFar;
+			}
+
+			if ($sleepFor>0) {
+				usleep($sleepFor);
+			}
+		} while ($timeSoFar+$sleepFor<$microseconds);
+	}
+
+	/**
+	 * Process an open stream forever. This function will never return, if you
+	 * want to perform other actions while consuming the stream, you should use
+	 * processFor() instead.
+	 * @return void This function will never return
+	 * @see processFor();
+	 */
+	public function processStreamForever() {
+		while (true) {
+			$this->processStream(600);
+		}
 	}
 
 }

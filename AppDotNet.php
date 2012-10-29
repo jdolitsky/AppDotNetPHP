@@ -42,6 +42,9 @@ class AppDotNet {
 	private $_last_request = null;
 	private $_last_response = null;
 
+	// ssl certification
+	private $_sslCA = null;
+
 	/**
 	 * Constructs an AppDotNet PHP object with the specified client ID and 
 	 * client secret.
@@ -53,6 +56,12 @@ class AppDotNet {
 	public function __construct($client_id,$client_secret) {
 		$this->_clientId = $client_id;
 		$this->_clientSecret = $client_secret;
+
+		// if the digicert certificate exists in the same folder as this file,
+		// remember that fact for later
+		if (file_exists(dirname(__FILE__).'/DigiCertHighAssuranceEVRootCA.pem')) {
+			$this->_sslCA = dirname(__FILE__).'/DigiCertHighAssuranceEVRootCA.pem';
+		}
 	}
 
 	/**
@@ -105,7 +114,7 @@ class AppDotNet {
 			);
 
 			// try and fetch the token with the above data
-			$res = $this->http('Post', $this->_authUrl.'access_token', $data);
+			$res = $this->httpReq('post',$this->_authUrl.'access_token', $data);
 
 			// store it for later
 			$this->_accessToken = $res['access_token'];
@@ -124,6 +133,35 @@ class AppDotNet {
 	 */
 	public function setAccessToken($token) {
 		$this->_accessToken = $token;
+	}
+
+	/**
+	 * Retrieve an app access token from the app.net API. This allows you
+	 * to access the API without going through the user access flow if you
+	 * just want to (eg) consume global. App access tokens are required for
+	 * some actions (like streaming global). DO NOT share the return value
+	 * of this function with any user (or save it in a cookie, etc). This
+	 * is considered secret info for your app only.
+	 * @return string The app access token
+	 */
+	public function getAppAccessToken() {
+
+		// construct the necessary elements to get a token
+		$data = array(
+			'client_id'=>$this->_clientId,
+			'client_secret'=>$this->_clientSecret,
+			'grant_type'=>'client_credentials',
+		);
+
+		// try and fetch the token with the above data
+		$res = $this->httpReq('post',$this->_authUrl.'access_token', $data);
+
+		// store it for later
+		$this->_accessToken = $res['access_token'];
+		$this->_username = null;
+		$this->_user_id = null;
+
+		return $this->_accessToken;
 	}
 
 	/**
@@ -215,14 +253,15 @@ class AppDotNet {
 		return http_build_query($array);
 	}
 
-	/**
-	 * Internal function. Handle all HTTP requests; GET, POST and DELETE
+	
+	/** 
+	 * Internal function to handle all 
+	 * HTTP requests (POST,GET,DELETE)
 	 */
-
-	protected function http($act, $req, $params=array(),$contentType='application/x-www-form-urlencoded') {
+	protected function httpReq($act, $req, $params=array(),$contentType='application/x-www-form-urlencoded') {
 		$ch = curl_init($req); 
 		$headers = array();
-		if($act == 'Post' || $act == 'Delete') {
+		if($act == 'post' || $act == 'delete') {
 			curl_setopt($ch, CURLOPT_POST, true);
 			// if they passed an array, build a list of parameters from it
 			if (is_array($params)) {
@@ -231,7 +270,7 @@ class AppDotNet {
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
 			$headers[] = "Content-Type: ".$contentType;
 		}
-		if($act == 'Delete') {
+		if($act == 'delete') {
 			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
 		}
 		if ($this->_accessToken) {
@@ -241,14 +280,23 @@ class AppDotNet {
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLINFO_HEADER_OUT, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);
+		if ($this->_sslCA) {
+			curl_setopt($ch, CURLOPT_CAINFO, $this->_sslCA);
+		}
 		$this->_last_response = curl_exec($ch); 
 		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
 		curl_close($ch);
+		if ($this->_last_request===false) {
+			if (!curl_getinfo($ch,CURLINFO_SSL_VERIFYRESULT)) {
+				throw new AppDotNetException('SSL verification failed, connection terminated.');
+			}
+		}
 		$response = $this->parseHeaders($this->_last_response);
 		$response = json_decode($response,true);
 		if (isset($response['error'])) {
 			if (is_array($response['error'])) {
-				throw new AppDotNetException($response['error']['message'],$response['error']['code']);
+				throw new AppDotNetException($response['error']['message'],
+								$response['error']['code']);
 			}
 			else {
 				throw new AppDotNetException($response['error']);
@@ -256,15 +304,13 @@ class AppDotNet {
 		} else {
 			return $response;
 		}
-
-
 	}
 
 	/**
 	 * Return the Filters for the current user.
 	 */
 	public function getAllFilters() {
-		return $this->http('Get', $this->_baseUrl.'filters');
+		return $this->httpReq('get',$this->_baseUrl.'filters');
 	}
 
 	/**
@@ -277,7 +323,7 @@ class AppDotNet {
 	 */
 	public function createFilter($name='New filter', $filters=array()) {
 		$filters['name'] = $name;
-		return $this->http('Post', $this->_baseUrl.'filters',$filters);
+		return $this->httpReq('post',$this->_baseUrl.'filters',$filters);
 	}
 
 	/**
@@ -285,7 +331,7 @@ class AppDotNet {
 	 * @param integer $filter_id The ID of the filter you wish to retrieve.
 	 */
 	public function getFilter($filter_id=null) {
-		return $this->http('Get', $this->_baseUrl.'filters/'.urlencode($filter_id));
+		return $this->httpReq('get',$this->_baseUrl.'filters/'.urlencode($filter_id));
 	}
 
 	/**
@@ -293,7 +339,7 @@ class AppDotNet {
 	 * @return object Returns the deleted Filter on success.
 	 */
 	public function deleteFilter($filter_id=null) {
-		return $this->http('Delete', $this->_baseUrl.'filters/'.urlencode($filter_id));
+		return $this->httpReq('delete',$this->_baseUrl.'filters/'.urlencode($filter_id));
 	}
 
 	/**
@@ -306,21 +352,31 @@ class AppDotNet {
 	 * will likely change as the API evolves, as of this writing allowed keys are:
 	 * reply_to, and annotations. "annotations" may be a complex object represented
 	 * by an associative array.
+	 * @param array $params An associative array of optional data to be included
+         * in the URL (such as 'include_anontations' and 'include_machine')
 	 * @return array An associative array representing the post.
 	 */
-	public function createPost($text=null, $data = array()) {
+	public function createPost($text=null, $data = array(), $params = array()) {
 		$data['text'] = $text;
 		$json = json_encode($data);
-		return $this->http('Post', $this->_baseUrl.'posts',$json,'application/json');
+		$qs = '';
+		if (!empty($params)) {
+			$qs = '?'.$this->buildQueryString($params);
+		}
+		return $this->httpReq('post',$this->_baseUrl.'posts'.$qs, $json, 'application/json');
 	}
 
 	/**
 	 * Returns a specific Post.
 	 * @param integer $post_id The ID of the post to retrieve
+	 * @param array $params An associative array of optional general parameters. 
+	 * This will likely change as the API evolves, as of this writing allowed keys 
+	 * are: include_annotations.
 	 * @return array An associative array representing the post
 	 */
-	public function getPost($post_id=null) {
-		return $this->http('Get', $this->_baseUrl.'posts/'.urlencode($post_id));
+	public function getPost($post_id=null,$params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'posts/'.urlencode($post_id)
+						.'?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -330,7 +386,7 @@ class AppDotNet {
 	 * @param array An associative array representing the post that was deleted
 	 */
 	public function deletePost($post_id=null) {
-		return $this->http('Delete', $this->_baseUrl.'posts/'.urlencode($post_id));
+		return $this->httpReq('delete',$this->_baseUrl.'posts/'.urlencode($post_id));
 	}
 
 	/**
@@ -339,11 +395,12 @@ class AppDotNet {
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
 	 * are:	count, before_id, since_id, include_muted, include_deleted, 
-	 * include_directed_posts, and include_annoations.
+	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getPostReplies($post_id=null,$params = array()) {
-		return $this->http('Get', $this->_baseUrl.'posts/'.urlencode($post_id).'/replies?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'posts/'.urlencode($post_id)
+				.'/replies?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -355,11 +412,12 @@ class AppDotNet {
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
 	 * are:	count, before_id, since_id, include_muted, include_deleted, 
-	 * include_directed_posts, and include_annoations.
+	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserPosts($user_id='me', $params = array()) {
-		return $this->http('Get', $this->_baseUrl.'users/'.urlencode($user_id).'/posts?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'users/'.urlencode($user_id)
+					.'/posts?'.$this->buildQueryString($params));
 	}
 	
 	/**
@@ -371,11 +429,12 @@ class AppDotNet {
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
 	 * are:	count, before_id, since_id, include_muted, include_deleted, 
-	 * include_directed_posts, and include_annoations.
+	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserMentions($user_id='me',$params = array()) {
-		return $this->http('Get', $this->_baseUrl.'users/'.urlencode($user_id).'/mentions?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'users/'
+			.urlencode($user_id).'/mentions?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -384,11 +443,11 @@ class AppDotNet {
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
 	 * are:	count, before_id, since_id, include_muted, include_deleted, 
-	 * include_directed_posts, and include_annoations.
+	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getUserStream($params = array()) {
-		return $this->http('Get', $this->_baseUrl.'posts/stream?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'posts/stream?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -398,7 +457,7 @@ class AppDotNet {
 	 * @return array An associative array representing the user data.
 	 */
 	public function getUser($user_id='me') {
-		return $this->http('Get', $this->_baseUrl.'users/'.urlencode($user_id));
+		return $this->httpReq('get',$this->_baseUrl.'users/'.urlencode($user_id));
 	}
 
 	/**
@@ -408,7 +467,7 @@ class AppDotNet {
 	 * @return array An associative array representing the user you just followed.
 	 */
 	public function followUser($user_id=null) {
-		return $this->http('Post', $this->_baseUrl.'users/'.urlencode($user_id).'/follow');
+		return $this->httpReq('post',$this->_baseUrl.'users/'.urlencode($user_id).'/follow');
 	}
 
 	/**
@@ -418,7 +477,7 @@ class AppDotNet {
 	 * @return array An associative array representing the user you just unfollowed.
 	 */
 	public function unfollowUser($user_id=null) {
-		return $this->http('Delete', $this->_baseUrl.'users/'.urlencode($user_id).'/follow');
+		return $this->httpReq('delete',$this->_baseUrl.'users/'.urlencode($user_id).'/follow');
 	}
 
 	/**
@@ -430,7 +489,7 @@ class AppDotNet {
 	 * user following $user_id
 	 */
 	public function getFollowing($user_id='me') {
-		return $this->http('Get', $this->_baseUrl.'users/'.$user_id.'/following');
+		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/following');
 	}
 	
 	/**
@@ -442,7 +501,7 @@ class AppDotNet {
 	 * user following $user_id
 	 */
 	public function getFollowers($user_id='me') {
-		return $this->http('Get', $this->_baseUrl.'users/'.$user_id.'/followers');
+		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/followers');
 	}
 
 	/**
@@ -451,11 +510,12 @@ class AppDotNet {
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
 	 * are:	count, before_id, since_id, include_muted, include_deleted, 
-	 * include_directed_posts, and include_annoations.
+	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function searchHashtags($hashtag=null, $params = array()) {
-		return $this->http('Get', $this->_baseUrl.'posts/tag/'.urlencode($hashtag).'?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'posts/tag/'
+				.urlencode($hashtag).'?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -464,11 +524,11 @@ class AppDotNet {
 	 * @param array $params An associative array of optional general parameters. 
 	 * This will likely change as the API evolves, as of this writing allowed keys 
 	 * are:	count, before_id, since_id, include_muted, include_deleted, 
-	 * include_directed_posts, and include_annoations.
+	 * include_directed_posts, and include_annotations.
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getPublicPosts($params = array()) {
-		return $this->http('Get', $this->_baseUrl.'posts/stream/global?'.$this->buildQueryString($params));
+		return $this->httpReq('get',$this->_baseUrl.'posts/stream/global?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -497,7 +557,7 @@ class AppDotNet {
 	 * @param integer $user_id The user ID to mute
 	 */
 	public function muteUser($user_id=null) {
-	 	return $this->http('Post', $this->_baseUrl.'users/'.urlencode($user_id).'/mute');
+	 	return $this->httpReq('post',$this->_baseUrl.'users/'.urlencode($user_id).'/mute');
 	}   
 	
 	/**
@@ -505,7 +565,7 @@ class AppDotNet {
 	 * @param integer $user_id The user ID to unmute
 	 */
 	public function unmuteUser($user_id=null) {
-		return $this->http('Delete', $this->_baseUrl.'users/'.urlencode($user_id).'/mute');
+		return $this->httpReq('delete',$this->_baseUrl.'users/'.urlencode($user_id).'/mute');
 	}       
 
 	/**
@@ -513,7 +573,86 @@ class AppDotNet {
 	 * @return array An array of associative arrays, each representing one muted user.
 	 */
 	public function getMuted() {
-		return $this->http('Get', $this->_baseUrl.'users/me/muted');
+		return $this->httpReq('get',$this->_baseUrl.'users/me/muted');
+	}
+
+	/**
+	* Star a post
+	* @param integer $post_id The post ID to star
+	*/
+	public function starPost($post_id=null) {
+		return $this->httpReq('post',$this->_baseUrl.'posts/'.urlencode($post_id).'/star');
+	}
+
+	/**
+	* Unstar a post
+	* @param integer $post_id The post ID to unstar
+	*/
+	public function unstarPost($post_id=null) {
+		return $this->httpReq('delete',$this->_baseUrl.'posts/'.urlencode($post_id).'/star');
+	}
+
+	/**
+	* List the posts starred by the current user
+	* @param array $params An associative array of optional general parameters. 
+	* This will likely change as the API evolves, as of this writing allowed keys 
+	* are:	count, before_id, since_id, include_muted, include_deleted, 
+	* include_directed_posts, and include_annotations.
+	* See https://github.com/appdotnet/api-spec/blob/master/resources/posts.md#general-parameters
+	* @return array An array of associative arrays, each representing a single 
+	* user who has starred a post
+	*/
+	public function getStarred($user_id='me', $params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'users/'.urlencode($user_id).'/stars'
+					.'?'.$this->buildQueryString($params));
+	}
+
+	/**
+	* List the users who have starred a post
+	* @param integer $post_id the post ID to get stars from
+	* @return array An array of associative arrays, each representing one user.
+	*/
+	public function getStars($post_id=null) {
+		return $this->httpReq('get',$this->_baseUrl.'posts/'.urlencode($post_id).'/stars');
+	}
+
+	/**
+	 * Returns an array of User objects of users who reposted the specified post.
+	 * @param integer $post_id the post ID to 
+	 * @return array An array of associative arrays, each representing a single 
+	 * user who reposted $post_id
+	 */
+	public function getReposters($post_id){
+		return $this->httpReq('get',$this->_baseUrl.'posts/'.urlencode($post_id).'/reposters'); 
+	}
+
+	/**
+	 * Repost an existing Post object.
+	 * @param integer $post_id The id of the post
+	 * @return not a clue
+	 */
+	public function repost($post_id){
+		return $this->httpReq('post',$this->_baseUrl.'posts/'.urlencode($post_id).'/repost');
+	}
+
+	/**
+	 * Delete a post that the user has reposted.
+	 * @param integer $post_id The id of the post
+	 * @return not a clue
+	 */
+	public function deleteRepost($post_id){
+		return $this->httpReq('delete',$this->_baseUrl.'posts/'.urlencode($post_id).'/repost');
+	}
+
+	/**
+	* List the users who match a specific search term
+	* @param string $search The search query. Supports @username or #tag searches as
+	* well as normal search terms. Searches username, display name, bio information.
+	* Does not search posts.
+	* @return array An array of associative arrays, each representing one user.
+	*/
+	public function searchUsers($search="") {
+		return $this->httpReq('get',$this->_baseUrl.'users/search?q='.urlencode($search));
 	}
 
 	public function getLastRequest() {
@@ -524,6 +663,5 @@ class AppDotNet {
 	}
 
 }
-
 
 class AppDotNetException extends Exception {}

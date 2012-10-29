@@ -5,7 +5,7 @@ $app_clientId     = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 $app_clientSecret = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
 // this must be one of the URLs defined in your App.net application settings
-$app_redirectUri  = 'http://localhost/AppDotNetPHP/ez-example/callback.php';
+$app_redirectUri  = 'http://localhost/ez-example/callback.php';
 
 // An array of permissions you're requesting from the user.
 // As a general rule you should only request permissions you need for your app.

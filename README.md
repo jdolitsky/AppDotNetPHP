@@ -16,7 +16,13 @@ The Stream API is currently under development. This library will be rapidly chan
 * <a href="https://alpha.app.net/jdolitsky" target="_blank">@jdolitsky</a>
 * <a href="https://alpha.app.net/ravisorg" target="_blank">@ravisorg</a>
 * <a href="https://github.com/wpstudio" target="_blank">@wpstudio</a>
-* <a href="https://alpha.app.net/hxf148" target="_blank">@hxf148</a>
+* <a href="https://alpha.app.net/harold" target="_blank">@harold</a>
+* <a href="https://alpha.app.net/edent" target="_blank">@edent</a>
+* <a href="https://alpha.app.net/cdn" target="_blank">@cdn</a>
+
+WARNING:
+---------
+This version breaks a lot of backward compatibility with the previous version, in order to be more flexible with the rapidly evolving API. YOU WILL HAVE TO MAKE CHANGES TO YOUR CODE WHEN YOU UPGRADE.
 
 Usage:
 --------
@@ -52,7 +58,7 @@ if ($app->getSession()) {
 
 ?>
 ```
-To view a full example in action, you should unpack/clone this project into your webroot directory. Edit the values in **EZsettings.php** to reflect the ones for your app (to make things easy, change the Callback URL within your app.net developers console to http://your-website.com/AppDotNetPHP/ez-example/callback.php). Add or remove values from the $app_scope array to change the permissions your app will have with the authenticated user. Travel to http://your-website.com/AppDotNetPHP/ez-example/ and click 'Sign in with App.net'.
+To view a full example in action, you should copy the project files into your webroot directory. Edit the values in **EZsettings.php** to reflect the ones for your app (to make things easy, change the Callback URL within your app.net developers console to http://localhost/ez-example/callback.php). Add or remove values from the $app_scope array to change the permissions your app will have with the authenticated user. Travel to http://localhost/ez-example/ and click 'Sign in with App.net'.
 
 ###AppDotNet
 Use this class if you need more control of your application (such as running a command line process) or are integrating your code with an existing application that handles sessions/cookies in a different way. 
@@ -66,14 +72,15 @@ require_once 'AppDotNet.php';
 // change these to your app's values
 $clientId     = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 $clientSecret = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
-$redirectUri  = 'http://your-website.com/callback.php';
-$scope        =  array('stream','email','write_post','follow','messages','export');
 
 // construct the AppDotNet object
-$app = new AppDotNet($clientId,$clientSecret,$redirectUri,$scope);
+$app = new AppDotNet($clientId,$clientSecret);
+
+$redirectUri  = 'http://localhost/callback.php';
+$scope        =  array('stream','email','write_post','follow','messages','export');
 
 // create an authentication Url
-$url = $app->getAuthUrl();
+$url = $app->getAuthUrl($redirectUri,$scope);
 
 ?>
 ```
@@ -81,11 +88,11 @@ Once the user has authenticated the app, grab the token in the callback script, 
 ```php
 <?php
 require_once 'AppDotNet.php';
-$app = new AppDotNet($clientId,$clientSecret,$redirectUri,$scope);
+$app = new AppDotNet($clientId,$clientSecret);
 
 // get the token returned by App.net
 // (this also sets the token)
-$token = $app->getAccessToken();
+$token = $app->getAccessToken($redirectUri);
 
 // get info about the user
 $user = $app->getUser();

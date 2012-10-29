@@ -256,12 +256,12 @@ class AppDotNet {
 	
 	/** 
 	 * Internal function to handle all 
-	 * HTTP requests (POST,GET,DELETE)
+	 * HTTP requests (POST,PUT,GET,DELETE)
 	 */
 	protected function httpReq($act, $req, $params=array(),$contentType='application/x-www-form-urlencoded') {
 		$ch = curl_init($req); 
 		$headers = array();
-		if($act == 'post' || $act == 'delete') {
+		if($act != 'get') {
 			curl_setopt($ch, CURLOPT_POST, true);
 			// if they passed an array, build a list of parameters from it
 			if (is_array($params)) {
@@ -270,8 +270,8 @@ class AppDotNet {
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
 			$headers[] = "Content-Type: ".$contentType;
 		}
-		if($act == 'delete') {
-			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+		if($act != 'post') {
+			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($act));
 		}
 		if ($this->_accessToken) {
 			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
@@ -353,7 +353,7 @@ class AppDotNet {
 	 * reply_to, and annotations. "annotations" may be a complex object represented
 	 * by an associative array.
 	 * @param array $params An associative array of optional data to be included
-         * in the URL (such as 'include_anontations' and 'include_machine')
+         * in the URL (such as 'include_annotations' and 'include_machine')
 	 * @return array An associative array representing the post.
 	 */
 	public function createPost($text=null, $data = array(), $params = array()) {
@@ -653,6 +653,73 @@ class AppDotNet {
 	*/
 	public function searchUsers($search="") {
 		return $this->httpReq('get',$this->_baseUrl.'users/search?q='.urlencode($search));
+	}
+
+	/**
+	* Update Profile Data via JSON
+	* {"name": "Mark Thurman 2", "locale":"en", "timezone":"US/Central", "description":{"text": "new description"}}
+	* php array('name' => '', 'locale' => '', timezone =>'', 'description' => array('text' => ''));
+	*/
+	public function updateUserData($data = array()) {
+		$json = json_encode($data);
+		return $this->httpReq('put',$this->_baseUrl.'users/me', $json, 'application/json');
+	}
+
+	/**
+	* MIME juggling for profile image changes
+	* uses curl shortcut for image uploads, path reference to image prefixed by @
+	*/
+	protected function updateUserImage($which = 'avatar', $image = null) {
+
+	$data = array($which=>"@$image"); // path reference only; no base64_encode() required
+
+	$req = $this->_baseUrl.'users/me/' . $which;
+		$ch = curl_init($req);
+		$headers = array();
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+		$headers[] = "Content-Type: multipart/form-data";
+		if ($this->_accessToken) {
+			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
+		}
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLINFO_HEADER_OUT, true);
+		curl_setopt($ch, CURLOPT_HEADER, true);
+		if ($this->_sslCA) {
+			curl_setopt($ch, CURLOPT_CAINFO, $this->_sslCA);
+		}
+		$this->_last_response = curl_exec($ch); 
+		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
+		curl_close($ch);
+		if ($this->_last_request===false) {
+			if (!curl_getinfo($ch,CURLINFO_SSL_VERIFYRESULT)) {
+				throw new AppDotNetException('SSL verification failed, connection terminated.');
+			}
+		}
+		$response = $this->parseHeaders($this->_last_response);
+		$response = json_decode($response,true);
+		if (isset($response['error'])) {
+			if (is_array($response['error'])) {
+				throw new AppDotNetException($response['error']['message'],
+								$response['error']['code']);
+			}
+			else {
+				throw new AppDotNetException($response['error']);
+			}
+		} else {
+			return $response;
+		}
+	}
+
+	public function updateUserAvatar($avatar = null) {
+		if($avatar != null)
+			return $this->updateUserImage('avatar', $avatar);
+	}
+
+	public function updateUserCover($cover = null) {
+		if($cover != null)
+			return $this->updateUserImage('cover', $cover);
 	}
 
 	public function getLastRequest() {

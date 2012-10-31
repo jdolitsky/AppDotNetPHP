@@ -273,7 +273,9 @@ class AppDotNet {
 		if($act != 'post') {
 			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($act));
 		}
-		if ($this->_accessToken) {
+		if($act == 'get' && $params['access_token']) {
+			$headers[] = 'Authorization: Bearer '.$params['access_token'];
+		else if ($this->_accessToken) {
 			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
 		}
 		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -653,6 +655,30 @@ class AppDotNet {
 	*/
 	public function searchUsers($search="") {
 		return $this->httpReq('get',$this->_baseUrl.'users/search?q='.urlencode($search));
+	}
+
+
+	/**
+	 * Return the 20 most recent posts for a stream using a valid Token
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are: count, before_id, since_id, include_muted, include_deleted,
+	 * include_directed_posts, and include_annotations.
+	 * @return An array of associative arrays, each representing a single post.
+	 */
+	public function getTokenStream($params = array()) {
+		if ($params[access_token]) {
+			return $this->httpReq('get',$this->_baseUrl.'posts/stream?'.$this->buildQueryString($params),$params); } else { return $this->httpReq('get',$this->_baseUrl.'posts/stream?'.$this->buildQueryString($params));
+		}
+	}
+
+	/**
+	 * Get a user object by username
+	 * @param string $name the @name to get
+	 * @return array representing one user
+	 */
+	public function getId($name=null) {
+		return $this->httpReq('get',$this->_baseUrl.'users/@'.$name);
 	}
 
 	/**

@@ -678,29 +678,28 @@ class AppDotNet {
 	 * @param string $name the @name to get
 	 * @return array representing one user
 	 */
-	public function getId($name=null) {
+	public function getUserByName($name=null) {
 		return $this->httpReq('get',$this->_baseUrl.'users/@'.$name);
 	}
 
 	/**
-	* Update Profile Data via JSON
-	* {"name": "Mark Thurman 2", "locale":"en", "timezone":"US/Central", "description":{"text": "new description"}}
-	* php array('name' => '', 'locale' => '', timezone =>'', 'description' => array('text' => ''));
-	*/
+	 * Update Profile Data via JSON
+	 * @data array containing user descriptors
+	 */
 	public function updateUserData($data = array()) {
 		$json = json_encode($data);
 		return $this->httpReq('put',$this->_baseUrl.'users/me', $json, 'application/json');
 	}
 
 	/**
-	* MIME juggling for profile image changes
-	* uses curl shortcut for image uploads, path reference to image prefixed by @
-	*/
+	 * Update a user image
+	 * @which avatar|cover
+	 * @image path reference to image
+	 */
 	protected function updateUserImage($which = 'avatar', $image = null) {
+		$data = array($which=>"@$image");
 
-	$data = array($which=>"@$image"); // path reference only; no base64_encode() required
-
-	$req = $this->_baseUrl.'users/me/' . $which;
+		$req = $this->_baseUrl.'users/me/' . $which;
 		$ch = curl_init($req);
 		$headers = array();
 		curl_setopt($ch, CURLOPT_POST, true);

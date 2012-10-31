@@ -264,13 +264,13 @@ class AppDotNet {
 		if($act != 'get') {
 			curl_setopt($ch, CURLOPT_POST, true);
 			// if they passed an array, build a list of parameters from it
-			if (is_array($params)) {
+			if (is_array($params) && $act != 'post-img') {
 				$params = $this->buildQueryString($params);
 			}
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
 			$headers[] = "Content-Type: ".$contentType;
 		}
-		if($act != 'post') {
+		if($act != 'post' && $act != 'post-img') {
 			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($act));
 		}
 		if($act == 'get' && isset($params['access_token'])) {
@@ -698,44 +698,7 @@ class AppDotNet {
 	 */
 	protected function updateUserImage($which = 'avatar', $image = null) {
 		$data = array($which=>"@$image");
-
-		$req = $this->_baseUrl.'users/me/' . $which;
-		$ch = curl_init($req);
-		$headers = array();
-		curl_setopt($ch, CURLOPT_POST, true);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-		$headers[] = "Content-Type: multipart/form-data";
-		if ($this->_accessToken) {
-			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
-		}
-		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLINFO_HEADER_OUT, true);
-		curl_setopt($ch, CURLOPT_HEADER, true);
-		if ($this->_sslCA) {
-			curl_setopt($ch, CURLOPT_CAINFO, $this->_sslCA);
-		}
-		$this->_last_response = curl_exec($ch); 
-		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
-		curl_close($ch);
-		if ($this->_last_request===false) {
-			if (!curl_getinfo($ch,CURLINFO_SSL_VERIFYRESULT)) {
-				throw new AppDotNetException('SSL verification failed, connection terminated.');
-			}
-		}
-		$response = $this->parseHeaders($this->_last_response);
-		$response = json_decode($response,true);
-		if (isset($response['error'])) {
-			if (is_array($response['error'])) {
-				throw new AppDotNetException($response['error']['message'],
-								$response['error']['code']);
-			}
-			else {
-				throw new AppDotNetException($response['error']);
-			}
-		} else {
-			return $response;
-		}
+		return $this->httpReq('post-img',$this->_baseUrl.'users/me/'.$which, $data, 'multipart/form-data');
 	}
 
 	public function updateUserAvatar($avatar = null) {

@@ -273,8 +273,9 @@ class AppDotNet {
 		if($act != 'post') {
 			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($act));
 		}
-		if($act == 'get' && $params['access_token']) {
+		if($act == 'get' && isset($params['access_token'])) {
 			$headers[] = 'Authorization: Bearer '.$params['access_token'];
+		}
 		else if ($this->_accessToken) {
 			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
 		}

@@ -302,24 +302,27 @@ class AppDotNet {
 
 	/**
 	 * Internal function to handle all
-	 * HTTP requests (POST,GET,DELETE)
+	 * HTTP requests (POST,PUT,GET,DELETE)
 	 */
 	protected function httpReq($act, $req, $params=array(),$contentType='application/x-www-form-urlencoded') {
 		$ch = curl_init($req);
 		$headers = array();
-		if($act == 'post' || $act == 'delete') {
+		if($act != 'get') {
 			curl_setopt($ch, CURLOPT_POST, true);
 			// if they passed an array, build a list of parameters from it
-			if (is_array($params)) {
+			if (is_array($params) && $act != 'post-img') {
 				$params = $this->buildQueryString($params);
 			}
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
 			$headers[] = "Content-Type: ".$contentType;
 		}
-		if($act == 'delete') {
-			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+		if($act != 'post' && $act != 'post-img') {
+			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($act));
 		}
-		if ($this->_accessToken) {
+		if($act == 'get' && isset($params['access_token'])) {
+			$headers[] = 'Authorization: Bearer '.$params['access_token'];
+		}
+		else if ($this->_accessToken) {
 			$headers[] = 'Authorization: Bearer '.$this->_accessToken;
 		}
 		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -750,6 +753,58 @@ class AppDotNet {
 	*/
 	public function searchUsers($search="") {
 		return $this->httpReq('get',$this->_baseUrl.'users/search?q='.urlencode($search));
+	}
+
+	/**
+	 * Return the 20 most recent posts for a stream using a valid Token
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are: count, before_id, since_id, include_muted, include_deleted,
+	 * include_directed_posts, and include_annotations.
+	 * @return An array of associative arrays, each representing a single post.
+	 */
+	public function getTokenStream($params = array()) {
+		if ($params[access_token]) {
+			return $this->httpReq('get',$this->_baseUrl.'posts/stream?'.$this->buildQueryString($params),$params); } else { return $this->httpReq('get',$this->_baseUrl.'posts/stream?'.$this->buildQueryString($params));
+		}
+	}
+
+	/**
+	 * Get a user object by username
+	 * @param string $name the @name to get
+	 * @return array representing one user
+	 */
+	public function getUserByName($name=null) {
+		return $this->httpReq('get',$this->_baseUrl.'users/@'.$name);
+	}
+
+	/**
+	 * Update Profile Data via JSON
+	 * @data array containing user descriptors
+	 */
+	public function updateUserData($data = array()) {
+		$json = json_encode($data);
+		return $this->httpReq('put',$this->_baseUrl.'users/me', $json, 'application/json');
+	}
+
+	/**
+	 * Update a user image
+	 * @which avatar|cover
+	 * @image path reference to image
+	 */
+	protected function updateUserImage($which = 'avatar', $image = null) {
+		$data = array($which=>"@$image");
+		return $this->httpReq('post-img',$this->_baseUrl.'users/me/'.$which, $data, 'multipart/form-data');
+	}
+
+	public function updateUserAvatar($avatar = null) {
+		if($avatar != null)
+			return $this->updateUserImage('avatar', $avatar);
+	}
+
+	public function updateUserCover($cover = null) {
+		if($cover != null)
+			return $this->updateUserImage('cover', $cover);
 	}
 
 	public function getLastRequest() {

@@ -453,7 +453,7 @@ class AppDotNet {
 	 * reply_to, and annotations. "annotations" may be a complex object represented
 	 * by an associative array.
 	 * @param array $params An associative array of optional data to be included
-         * in the URL (such as 'include_anontations' and 'include_machine')
+         * in the URL (such as 'include_annotations' and 'include_machine')
 	 * @return array An associative array representing the post.
 	 */
 	public function createPost($text=null, $data = array(), $params = array()) {
@@ -554,10 +554,14 @@ class AppDotNet {
 	 * Returns a specific user object.
 	 * @param mixed $user_id The ID of the user you want to retrieve, or the string
 	 * "me" to retrieve data for the users you're currently authenticated as.
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are: include_annotations|include_user_annotations.
 	 * @return array An associative array representing the user data.
 	 */
-	public function getUser($user_id='me') {
-		return $this->httpReq('get',$this->_baseUrl.'users/'.urlencode($user_id));
+	public function getUser($user_id='me', $params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'users/'.urlencode($user_id)
+						.'?'.$this->buildQueryString($params));
 	}
 
 	/**

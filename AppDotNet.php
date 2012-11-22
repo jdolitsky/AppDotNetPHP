@@ -631,6 +631,13 @@ class AppDotNet {
 		return $this->httpReq('get',$this->_baseUrl.'posts/stream/global?'.$this->buildQueryString($params));
 	}
 
+  /**
+   * List User interactions
+   */
+  public function getMyInteractions($params = array()) {
+    return $this->httpReq('get',$this->_baseUrl.'users/me/interactions?'.$this->buildQueryString($params));
+  }
+
 	/**
 	 * Retrieve a user's user ID by specifying their username.
 	 * Now supported by the API. We use the API if we have a token

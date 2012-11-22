@@ -635,24 +635,37 @@ class AppDotNet {
 		return $this->httpReq('get',$this->_baseUrl.'posts/stream/global?'.$this->buildQueryString($params));
 	}
 
+  /**
+   * List User interactions
+   */
+  public function getMyInteractions($params = array()) {
+    return $this->httpReq('get',$this->_baseUrl.'users/me/interactions?'.$this->buildQueryString($params));
+  }
+
 	/**
 	 * Retrieve a user's user ID by specifying their username.
-	 * Not currently supported by the API, so we scrape the alpha.app.net site for the info.
+	 * Now supported by the API. We use the API if we have a token
+	 * Otherwise we scrape the alpha.app.net site for the info.
 	 * @param string $username The username of the user you want the ID of, without
 	 * an @ symbol at the beginning.
 	 * @return integer The user's user ID
 	 */
 	public function getIdByUsername($username=null) {
-		$ch = curl_init('https://alpha.app.net/'.urlencode(strtolower($username)));
-		curl_setopt($ch, CURLOPT_POST, false);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch,CURLOPT_USERAGENT,
-			'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:7.0.1) Gecko/20100101 Firefox/7.0.1');
-		$response = curl_exec($ch);
-		curl_close($ch);
-		$temp = explode('title="User Id ',$response);
-		$temp2 = explode('"',$temp[1]);
-		$user_id = $temp2[0];
+		if ($this->_accessToken) {
+			$res=$this->httpReq('get',$this->_baseUrl.'users/@'.$username);
+			$user_id=$res['data']['id'];
+		} else {
+			$ch = curl_init('https://alpha.app.net/'.urlencode(strtolower($username)));
+			curl_setopt($ch, CURLOPT_POST, false);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch,CURLOPT_USERAGENT,
+				'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:7.0.1) Gecko/20100101 Firefox/7.0.1');
+			$response = curl_exec($ch);
+			curl_close($ch);
+			$temp = explode('title="User Id ',$response);
+			$temp2 = explode('"',$temp[1]);
+			$user_id = $temp2[0];
+		}
 		return $user_id;
 	}
 
@@ -768,8 +781,10 @@ class AppDotNet {
 	 * @return An array of associative arrays, each representing a single post.
 	 */
 	public function getTokenStream($params = array()) {
-		if ($params[access_token]) {
-			return $this->httpReq('get',$this->_baseUrl.'posts/stream?'.$this->buildQueryString($params),$params); } else { return $this->httpReq('get',$this->_baseUrl.'posts/stream?'.$this->buildQueryString($params));
+		if ($params['access_token']) {
+			return $this->httpReq('get',$this->_baseUrl.'posts/stream?'.$this->buildQueryString($params),$params);
+		} else {
+			return $this->httpReq('get',$this->_baseUrl.'posts/stream?'.$this->buildQueryString($params));
 		}
 	}
 
@@ -783,6 +798,19 @@ class AppDotNet {
 	}
 
 	/**
+	* Return the 20 most recent Posts from the current User's personalized stream
+	* and mentions stream merged into one stream.
+	* @param array $params An associative array of optional general parameters.
+	* This will likely change as the API evolves, as of this writing allowed keys
+	* are: count, before_id, since_id, include_muted, include_deleted,
+	* include_directed_posts, and include_annotations.
+	* @return An array of associative arrays, each representing a single post.
+	*/
+	public function getUserUnifiedStream($params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'posts/stream/unified?'.$this->buildQueryString($params));
+  }
+
+  /**
 	 * Update Profile Data via JSON
 	 * @data array containing user descriptors
 	 */

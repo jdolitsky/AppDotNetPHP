@@ -102,7 +102,7 @@ class AppDotNet {
 	/**
 	 * Set whether or not to strip Envelopse Response (meta) information
 	 * This option will be deprecated in the future. Is it to allow
-	 * a migration path between code expecting the old behavior
+	 * a stepped migration path between code expecting the old behavior
 	 * and new behavior. When not stripped, you still can use the proper
 	 * method to pull the meta information. Please start converting your code ASAP
 	 */

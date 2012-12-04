@@ -38,6 +38,9 @@ class AppDotNet {
 	// The number of seconds remaining in the alloted time period
 	private $_rateLimitReset = null;
 
+	// The scope the user has
+	private $_scope = null;
+
 	// debug info
 	private $_last_request = null;
 	private $_last_response = null;
@@ -224,7 +227,7 @@ class AppDotNet {
 	 * @see getRateLimitReset()
 	 */
 	public function getRateLimitRemaining() {
-		return $_rateLimitRemaining;
+		return $this->_rateLimitRemaining;
 	}
 
 	/**
@@ -232,7 +235,14 @@ class AppDotNet {
 	 * When this time is up you'll have getRateLimit() available again.
 	 */
 	public function getRateLimitReset() {
-		return $_rateLimitReset;
+		return $this->$_rateLimitReset;
+	}
+
+	/**
+	 * The scope the user has
+	 */
+	public function getScope() {
+		return $this->_scope;
 	}
 
 	/**
@@ -243,9 +253,10 @@ class AppDotNet {
 		// take out the headers
 		// set internal variables
 		// return the body/content
-		$this->rateLimit = null;
-		$this->rateLimitRemaining = null;
-		$this->rateLimitReset = null;
+		$this->_rateLimit = null;
+		$this->_rateLimitRemaining = null;
+		$this->_rateLimitReset = null;
+		$this->_scope = null;
 
 		$response = explode("\r\n\r\n",$response,2);
 		$headers = $response[0];
@@ -268,15 +279,17 @@ class AppDotNet {
 			list($k,$v) = $header;
 			switch ($k) {
 				case 'X-RateLimit-Remaining':
-					$this->rateLimitRemaining = $v;
+					$this->_rateLimitRemaining = $v;
 					break;
 				case 'X-RateLimit-Limit':
-					$this->rateLimit = $v;
+					$this->_rateLimit = $v;
 					break;
 				case 'X-RateLimit-Reset':
-					$this->rateLimitReset = $v;
+					$this->_rateLimitReset = $v;
 					break;
-
+				case 'X-OAuth-Scopes':
+					$this->_scope = $v;
+					break;
 			}
 		}
 		return $content;

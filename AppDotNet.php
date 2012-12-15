@@ -16,7 +16,7 @@
 class AppDotNet {
 
 	protected $_baseUrl = 'https://alpha-api.app.net/stream/0/';
-	protected $_authUrl = 'https://alpha.app.net/oauth/';
+	protected $_authUrl = 'https://account.app.net/oauth/';
 
 	private $_authPostParams=array();
 
@@ -340,7 +340,7 @@ class AppDotNet {
 			throw new AppDotNetException('Unable to connect to '.$req);
 		}
 		if ($http_status<200 || $http_status>=300) {
-			throw new AppDotNetException('HTTP error '.$http_status);
+			throw new AppDotNetException('HTTP error '.$this->_last_response);
 		}
 		if ($this->_last_request===false) {
 			if (!curl_getinfo($ch,CURLINFO_SSL_VERIFYRESULT)) {
@@ -351,9 +351,13 @@ class AppDotNet {
 		$response = json_decode($response,true);
 
 		if (isset($response['meta'])) {
-			$this->_maxid=$response['meta']['max_id'];
-			$this->_minid=$response['meta']['min_id'];
-			$this->_more=$response['meta']['more'];
+			if (isset($response['meta']['max_id'])) {
+				$this->_maxid=$response['meta']['max_id'];
+				$this->_minid=$response['meta']['min_id'];
+			}
+			if (isset($response['meta']['more'])) {
+				$this->_more=$response['meta']['more'];
+			}
 		}
 
 
@@ -838,6 +842,103 @@ class AppDotNet {
 		if($cover != null)
 			return $this->updateUserImage('cover', $cover);
 	}
+
+  /**
+   * update stream marker
+   */
+  public function updateStreamMarker($data = array()) {
+		$json = json_encode($data);
+		return $this->httpReq('post',$this->_baseUrl.'posts/marker', $json, 'application/json');
+  }
+
+  /**
+   * get a page of current user subscribed channels
+   */
+  public function getUserSubscriptions($params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'channels?'.$this->buildQueryString($params));
+  }
+
+  /**
+   * create a channel
+   */
+  public function createChannel($data = array()) {
+		$json = json_encode($data);
+		return $this->httpReq('post',$this->_baseUrl.'channels', $json, 'application/json');
+  }
+
+  /**
+   * get channelid info
+   */
+  public function getChannel($channelid) {
+		return $this->httpReq('get',$this->_baseUrl.'channels/'.$channelid);
+  }
+
+  /**
+   * update channelid
+   */
+  public function updateChannel($channelid, $data = array()) {
+		$json = json_encode($data);
+		return $this->httpReq('put',$this->_baseUrl.'channels/'.$channelid, $json, 'application/json');
+  }
+
+  /**
+   * subscribe from channelid
+   */
+  public function channelSubscribe($channelid) {
+		return $this->httpReq('post',$this->_baseUrl.'channels/'.$channelid.'/subscribe');
+  }
+
+  /**
+   * unsubscribe from channelid
+   */
+  public function channelUnsubscribe($channelid) {
+		return $this->httpReq('delete',$this->_baseUrl.'channels/'.$channelid.'/subscribe');
+  }
+
+  /**
+   * get all user objects subscribed to channelid
+   */
+  public function getChannelSubscriptions($channelid, $params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'channel/'.$channelid.'/subscribers?'.$this->buildQueryString($params));
+  }
+
+  /**
+   * get all user IDs subscribed to channelid
+   */
+  public function getChannelSubscriptionsById($channelid) {
+		return $this->httpReq('get',$this->_baseUrl.'channel/'.$channelid.'/subscribers/ids');
+  }
+
+
+  /**
+   * get a page of messages in channelid
+   */
+  public function getMessages($channelid, $params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'channels/'.$channelid.'/messages?'.$this->buildQueryString($params));
+  }
+
+  /**
+   * create message
+   * @param $channelid numeric or "pm" for auto-chanenl
+   */
+  public function createMessage($channelid,$data) {
+		$json = json_encode($data);
+		return $this->httpReq('post',$this->_baseUrl.'channels/'.$channelid.'/messages', $json, 'application/json');
+  }
+
+  /**
+   * get message
+   */
+  public function getMessage($channelid,$messageid) {
+		return $this->httpReq('get',$this->_baseUrl.'channels/'.$channelid.'/messages/'.$messageid);
+  }
+
+  /**
+   * delete messsage
+   */
+  public function deleteMessage($channelid,$messageid) {
+		return $this->httpReq('delete',$this->_baseUrl.'channels/'.$channelid.'/messages/'.$messageid);
+  }
 
 	public function getLastRequest() {
 		return $this->_last_request;

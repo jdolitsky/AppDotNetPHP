@@ -860,10 +860,11 @@ class AppDotNet {
 
   /**
    * create a channel
+   * note: you cannot create a channel with type=net.app.core.pm (see createMessage)
    */
   public function createChannel($data = array()) {
 		$json = json_encode($data);
-		return $this->httpReq('post',$this->_baseUrl.'channels', $json, 'application/json');
+		return $this->httpReq('post',$this->_baseUrl.'channels'.($pm?'/pm/messsages':''), $json, 'application/json');
   }
 
   /**
@@ -919,7 +920,8 @@ class AppDotNet {
 
   /**
    * create message
-   * @param $channelid numeric or "pm" for auto-chanenl
+   * @param $channelid numeric or "pm" for auto-chanenl (type=net.app.core.pm)
+   * @param $data array('text'=>'YOUR_MESSAGE') If a type=net.app.core.pm, then "destinations" key can be set to address as an array of people to send this PM too
    */
   public function createMessage($channelid,$data) {
 		$json = json_encode($data);

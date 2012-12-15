@@ -34,7 +34,7 @@ print "stream id [".$stream['id']."]\n";
     [meta] => Array
         (
             [timestamp] => 1352147672891
-            [type] => post/star
+            [type] => post/star/etc...
             [id] => 1399341
         )
     // data is as you would expect it
@@ -45,16 +45,25 @@ function handleEvent($event) {
   $counters[$event['meta']['type']]++;
   switch ($event['meta']['type']) {
       case 'post':
-          print "p";
+          print $event['meta']['is_deleted']?'p':'P';
           break;
       case 'star':
-          print "*";
+          print $event['meta']['is_deleted']?'_':'*';
           break;
       case 'user_follow':
-          print "F";
+          print $event['meta']['is_deleted']?'f':'F';
           break;
-      case 'repost':
-          print "R";
+      case 'stream_marker':
+          print $event['meta']['is_deleted']?'/':'=';
+          break;
+      case 'message':
+          print $event['meta']['is_deleted']?'m':'M';
+          break;
+      case 'channel':
+          print $event['meta']['is_deleted']?'c':'C';
+          break;
+      case 'channel_subscription':
+          print $event['meta']['is_deleted']?'f':'F';
           break;
       default:
           print "Unknwon type [".$event['meta']['type']."]\n";
@@ -74,12 +83,12 @@ $app->openStream($stream['endpoint']);
 // otherwise you can create a loop, and call $app->processStream($milliseconds)
 // intermittently, like:
 while (true) {
-    $counters=array('post'=>0,'star'=>0,'user_follow'=>0,'repost'=>0);
+    $counters=array('post'=>0,'star'=>0,'user_follow'=>0,'stream_marker'=>0,'message'=>0,'channel'=>0,'channel_subscription'=>0);
     // now we're going to process the stream for awhile (60 seconds)
     $app->processStream(60*1000000);
     echo "\n";
     // show some stats
-    echo date('H:i')." [",$counters['post'],"]posts [",$counters['star'],"]stars [",$counters['user_follow'],"]follow /min\n";
+    echo date('H:i')." [",$counters['post'],"]posts [",$counters['star'],"]stars [",$counters['user_follow'],"]follow [",$counters['stream_marker'],"]mrkrs [",$counters['message'],"]msgs /min\n";
     // then do something else...
 }
 ?>

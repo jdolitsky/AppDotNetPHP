@@ -16,7 +16,7 @@
 class AppDotNet {
 
 	protected $_baseUrl = 'https://alpha-api.app.net/stream/0/';
-	protected $_authUrl = 'https://alpha.app.net/oauth/';
+	protected $_authUrl = 'https://account.app.net/oauth/';
 
 	private $_authPostParams=array();
 
@@ -81,6 +81,9 @@ class AppDotNet {
 	// response meta more data
 	private $_more = null;
 
+	// response stream marker data
+	private $_last_marker = null;
+
 	// strip envelope response from returned value
 	private $_stripResponseEnvelope=true;
 	/**
@@ -105,7 +108,7 @@ class AppDotNet {
 	/**
 	 * Set whether or not to strip Envelopse Response (meta) information
 	 * This option will be deprecated in the future. Is it to allow
-	 * a migration path between code expecting the old behavior
+	 * a stepped migration path between code expecting the old behavior
 	 * and new behavior. When not stripped, you still can use the proper
 	 * method to pull the meta information. Please start converting your code ASAP
 	 */
@@ -353,7 +356,7 @@ class AppDotNet {
 			throw new AppDotNetException('Unable to connect to '.$req);
 		}
 		if ($http_status<200 || $http_status>=300) {
-			throw new AppDotNetException('HTTP error '.$http_status);
+			throw new AppDotNetException('HTTP error '.$this->_last_response);
 		}
 		if ($this->_last_request===false) {
 			if (!curl_getinfo($ch,CURLINFO_SSL_VERIFYRESULT)) {
@@ -364,11 +367,17 @@ class AppDotNet {
 		$response = json_decode($response,true);
 
 		if (isset($response['meta'])) {
-			$this->_maxid=$response['meta']['max_id'];
-			$this->_minid=$response['meta']['min_id'];
-			$this->_more=$response['meta']['more'];
+			if (isset($response['meta']['max_id'])) {
+				$this->_maxid=$response['meta']['max_id'];
+				$this->_minid=$response['meta']['min_id'];
+			}
+			if (isset($response['meta']['more'])) {
+				$this->_more=$response['meta']['more'];
+			}
+			if (isset($response['meta']['marker'])) {
+				$this->_last_marker=$response['meta']['marker'];
+			}
 		}
-
 
 		// look for errors
 		if (isset($response['error'])) {
@@ -417,6 +426,13 @@ class AppDotNet {
 	 */
 	public function getResponseMore() {
 		return $this->_more;
+	}
+
+	/**
+	 * Get marker from last meta response data envelope
+	 */
+	public function getResponseMarker() {
+		return $this->_last_marker;
 	}
 
 	/**
@@ -851,6 +867,105 @@ class AppDotNet {
 		if($cover != null)
 			return $this->updateUserImage('cover', $cover);
 	}
+
+  /**
+   * update stream marker
+   */
+  public function updateStreamMarker($data = array()) {
+		$json = json_encode($data);
+		return $this->httpReq('post',$this->_baseUrl.'posts/marker', $json, 'application/json');
+  }
+
+  /**
+   * get a page of current user subscribed channels
+   */
+  public function getUserSubscriptions($params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'channels?'.$this->buildQueryString($params));
+  }
+
+  /**
+   * create a channel
+   * note: you cannot create a channel with type=net.app.core.pm (see createMessage)
+   */
+  public function createChannel($data = array()) {
+		$json = json_encode($data);
+		return $this->httpReq('post',$this->_baseUrl.'channels'.($pm?'/pm/messsages':''), $json, 'application/json');
+  }
+
+  /**
+   * get channelid info
+   */
+  public function getChannel($channelid) {
+		return $this->httpReq('get',$this->_baseUrl.'channels/'.$channelid);
+  }
+
+  /**
+   * update channelid
+   */
+  public function updateChannel($channelid, $data = array()) {
+		$json = json_encode($data);
+		return $this->httpReq('put',$this->_baseUrl.'channels/'.$channelid, $json, 'application/json');
+  }
+
+  /**
+   * subscribe from channelid
+   */
+  public function channelSubscribe($channelid) {
+		return $this->httpReq('post',$this->_baseUrl.'channels/'.$channelid.'/subscribe');
+  }
+
+  /**
+   * unsubscribe from channelid
+   */
+  public function channelUnsubscribe($channelid) {
+		return $this->httpReq('delete',$this->_baseUrl.'channels/'.$channelid.'/subscribe');
+  }
+
+  /**
+   * get all user objects subscribed to channelid
+   */
+  public function getChannelSubscriptions($channelid, $params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'channel/'.$channelid.'/subscribers?'.$this->buildQueryString($params));
+  }
+
+  /**
+   * get all user IDs subscribed to channelid
+   */
+  public function getChannelSubscriptionsById($channelid) {
+		return $this->httpReq('get',$this->_baseUrl.'channel/'.$channelid.'/subscribers/ids');
+  }
+
+
+  /**
+   * get a page of messages in channelid
+   */
+  public function getMessages($channelid, $params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'channels/'.$channelid.'/messages?'.$this->buildQueryString($params));
+  }
+
+  /**
+   * create message
+   * @param $channelid numeric or "pm" for auto-chanenl (type=net.app.core.pm)
+   * @param $data array('text'=>'YOUR_MESSAGE') If a type=net.app.core.pm, then "destinations" key can be set to address as an array of people to send this PM too
+   */
+  public function createMessage($channelid,$data) {
+		$json = json_encode($data);
+		return $this->httpReq('post',$this->_baseUrl.'channels/'.$channelid.'/messages', $json, 'application/json');
+  }
+
+  /**
+   * get message
+   */
+  public function getMessage($channelid,$messageid) {
+		return $this->httpReq('get',$this->_baseUrl.'channels/'.$channelid.'/messages/'.$messageid);
+  }
+
+  /**
+   * delete messsage
+   */
+  public function deleteMessage($channelid,$messageid) {
+		return $this->httpReq('delete',$this->_baseUrl.'channels/'.$channelid.'/messages/'.$messageid);
+  }
 
 	public function getLastRequest() {
 		return $this->_last_request;

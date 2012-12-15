@@ -78,6 +78,9 @@ class AppDotNet {
 	// response meta more data
 	private $_more = null;
 
+	// response stream marker data
+	private $_last_marker = null;
+
 	// strip envelope response from returned value
 	private $_stripResponseEnvelope=true;
 	/**
@@ -358,8 +361,10 @@ class AppDotNet {
 			if (isset($response['meta']['more'])) {
 				$this->_more=$response['meta']['more'];
 			}
+			if (isset($response['meta']['marker'])) {
+				$this->_last_marker=$response['meta']['marker'];
+			}
 		}
-
 
 		// look for errors
 		if (isset($response['error'])) {
@@ -408,6 +413,13 @@ class AppDotNet {
 	 */
 	public function getResponseMore() {
 		return $this->_more;
+	}
+
+	/**
+	 * Get marker from last meta response data envelope
+	 */
+	public function getResponseMarker() {
+		return $this->_last_marker;
 	}
 
 	/**

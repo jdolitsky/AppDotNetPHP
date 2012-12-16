@@ -17,8 +17,10 @@ The Stream API is currently under development. This library will be rapidly chan
 * <a href="https://alpha.app.net/ravisorg" target="_blank">@ravisorg</a>
 * <a href="https://github.com/wpstudio" target="_blank">@wpstudio</a>
 * <a href="https://alpha.app.net/harold" target="_blank">@harold</a>
+* <a href="https://alpha.app.net/hxf148" target="_blank">@hxf148</a>
 * <a href="https://alpha.app.net/edent" target="_blank">@edent</a>
 * <a href="https://alpha.app.net/cdn" target="_blank">@cdn</a>
+* <a href="https://alpha.app.net/ryantharp" target="_blank">@ryantharp</a>
 
 WARNING:
 ---------
@@ -61,7 +63,7 @@ if ($app->getSession()) {
 To view a full example in action, you should copy the project files into your webroot directory. Edit the values in **EZsettings.php** to reflect the ones for your app (to make things easy, change the Callback URL within your app.net developers console to http://localhost/ez-example/callback.php). Add or remove values from the $app_scope array to change the permissions your app will have with the authenticated user. Travel to http://localhost/ez-example/ and click 'Sign in with App.net'.
 
 ###AppDotNet
-Use this class if you need more control of your application (such as running a command line process) or are integrating your code with an existing application that handles sessions/cookies in a different way. 
+Use this class if you need more control of your application (such as running a command line process) or are integrating your code with an existing application that handles sessions/cookies in a different way.
 
 First construct your authentication url.
 ```php
@@ -77,7 +79,7 @@ $clientSecret = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 $app = new AppDotNet($clientId,$clientSecret);
 
 $redirectUri  = 'http://localhost/callback.php';
-$scope        =  array('stream','email','write_post','follow','messages','export');
+$scope        =  array('stream','email','write_post','follow','messages','update_profile','export');
 
 // create an authentication Url
 $url = $app->getAuthUrl($redirectUri,$scope);
@@ -128,8 +130,8 @@ $token = $app->getAppAccessToken();
 // create a stream
 // if you already have a stream you can skip this step
 // this stream is going to consume posts and stars (but not follows)
-$stream = $app->createStream(array('post','star'));
-// you might want to save $stream['endpoint'] or $stream['id'] for later so 
+$stream = $app->createStream(array('post','star','user_follow','stream_marker','message','channel','channel_subscription'));
+// you might want to save $stream['endpoint'] or $stream['id'] for later so
 // you don't have to re-create the stream
 
 // we need to create a callback function that will do something with posts/stars
@@ -155,7 +157,7 @@ $app->openStream($stream['endpoint']);
 // now we want to process the stream. We have two options. If all we're doing
 // in this script is processing the stream, we can just call:
 // $app->processStreamForever();
-// otherwise you can create a loop, and call $app->processStream($milliseconds) 
+// otherwise you can create a loop, and call $app->processStream($milliseconds)
 // intermittently, like:
 while (true) {
 	print "hello, I'm going to do some other non-streaming things here...\n";

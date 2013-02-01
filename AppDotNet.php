@@ -1242,6 +1242,44 @@ class AppDotNet {
 
 
 	/**
+	 * Upload a file to a user's file store
+	 * @param $file path reference to file
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are: include_annotations|include_file_annotations.
+	 * @return array An associative array representing the file
+	 */
+	public function createFile($file = null, $params=array()) {
+		$finfo = finfo_open(FILEINFO_MIME_TYPE);
+		$mime = finfo_file($finfo, $file);
+		finfo_close($finfo);
+
+		$data = array('content'=>"@$file;type=$mime", 'type'=> $params['metadata']);
+
+		return $this->httpReq('post-img',$this->_baseUrl.'files', $data, 'multipart/form-data');
+	}
+
+
+	public function createFilePlaceholder($file = null, $params=array()) {
+		$name = basename($file);
+		$data = array('annotations' => $params['annotations'], 'kind' => $params['kind'],
+				'name' => $name, 'type' => $params['metadata']);
+		$json = json_encode($data);
+		return $this->httpReq('post',$this->_baseUrl.'files', $json, 'application/json');
+	}
+
+	public function updateFileContent($fileid, $file) {
+
+		$data = file_get_contents($file);
+		$finfo = finfo_open(FILEINFO_MIME_TYPE);
+		$mime = finfo_file($finfo, $file);
+		finfo_close($finfo);
+
+		return $this->httpReq('put',$this->_baseUrl.'files/' . $fileid
+						.'/content', $data, $mime);
+	}
+
+	/**
 	 * Returns a specific File.
 	 * @param integer $file_id The ID of the file to retrieve
 	 * @param array $params An associative array of optional general parameters.
@@ -1282,6 +1320,15 @@ class AppDotNet {
 						.'?'.$this->buildQueryString($params));
 	}
 
+	/**
+	 * Delete a File. The current user must be the same user who created the File.
+	 * It returns the deleted File on success.
+	 * @param integer $file_id The ID of the file to delete
+	 * @return array An associative array representing the file that was deleted
+	 */
+	public function deleteFile($file_id=null) {
+		return $this->httpReq('delete',$this->_baseUrl.'files/'.urlencode($file_id));
+	}
 
 }
 

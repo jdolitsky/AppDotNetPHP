@@ -1240,6 +1240,49 @@ class AppDotNet {
 		}
 	}
 
+
+	/**
+	 * Returns a specific File.
+	 * @param integer $file_id The ID of the file to retrieve
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are: include_annotations|include_file_annotations.
+	 * @return array An associative array representing the file
+	 */
+	public function getFile($file_id=null,$params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'files/'.urlencode($file_id)
+						.'?'.$this->buildQueryString($params));
+	}
+
+	/**
+	 * Returns file objects.
+	 * @param array $file_ids The IDs of the files to retrieve
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are: include_annotations|include_file_annotations.
+	 * @return array An associative array representing the file data.
+	 */
+/*
+	public function getFiles($file_ids=array(), $params = array()) {
+
+		return $this->httpReq('get',$this->_baseUrl.'files'
+						.'?'.$this->buildQueryString($params));
+	}
+*/
+
+	/**
+	 * Returns a user's file objects.
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are: include_annotations|include_file_annotations|include_user_annotations.
+	 * @return array An associative array representing the file data.
+	 */
+	public function getUserFiles($params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'users/me/files'
+						.'?'.$this->buildQueryString($params));
+	}
+
+
 }
 
 class AppDotNetException extends Exception {}

@@ -326,13 +326,13 @@ class AppDotNet {
 		if($act != 'get') {
 			curl_setopt($ch, CURLOPT_POST, true);
 			// if they passed an array, build a list of parameters from it
-			if (is_array($params) && $act != 'post-img') {
+			if (is_array($params) && $act != 'post-raw') {
 				$params = $this->buildQueryString($params);
 			}
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
 			$headers[] = "Content-Type: ".$contentType;
 		}
-		if($act != 'post' && $act != 'post-img') {
+		if($act != 'post' && $act != 'post-raw') {
 			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($act));
 		}
 		if($act == 'get' && isset($params['access_token'])) {
@@ -855,7 +855,7 @@ class AppDotNet {
 	 */
 	protected function updateUserImage($which = 'avatar', $image = null) {
 		$data = array($which=>"@$image");
-		return $this->httpReq('post-img',$this->_baseUrl.'users/me/'.$which, $data, 'multipart/form-data');
+		return $this->httpReq('post-raw',$this->_baseUrl.'users/me/'.$which, $data, 'multipart/form-data');
 	}
 
 	public function updateUserAvatar($avatar = null) {
@@ -1256,7 +1256,7 @@ class AppDotNet {
 
 		$data = array('content'=>"@$file;type=$mime", 'type'=> $params['metadata']);
 
-		return $this->httpReq('post-img',$this->_baseUrl.'files', $data, 'multipart/form-data');
+		return $this->httpReq('post-raw',$this->_baseUrl.'files', $data, 'multipart/form-data');
 	}
 
 
@@ -1278,6 +1278,18 @@ class AppDotNet {
 		return $this->httpReq('put',$this->_baseUrl.'files/' . $fileid
 						.'/content', $data, $mime);
 	}
+
+	 /**
+         * Allows for file rename and annotation changes.
+	 * @param integer $file_id The ID of the file to update
+	 * @param array $params An associative array of file parameters.
+	 * @return array An associative array representing the updated file
+         */
+        public function updateFile($file_id=null, $params=array()) {
+                $data = array('annotations' => $params['annotations'] , 'name' => $params['name']);
+                $json = json_encode($data);
+                return $this->httpReq('put',$this->_baseUrl.'files/'.urlencode($file_id), $json, 'application/json');
+        }
 
 	/**
 	 * Returns a specific File.

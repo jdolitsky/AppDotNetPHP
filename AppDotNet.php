@@ -1288,8 +1288,18 @@ class AppDotNet {
 	 * @return array An associative array representing the file
 	 */
 	public function getFile($file_id=null,$params = array()) {
-		return $this->httpReq('get',$this->_baseUrl.'files/'.urlencode($file_id)
+		if(is_array($file_id)) {
+			$ids = '';
+			foreach($file_id as $id) {
+				$ids .= $id . ',';
+			}
+			$params['ids'] = substr($ids, 0, -1);
+			return $this->httpReq('get',$this->_baseUrl.'files'
 						.'?'.$this->buildQueryString($params));
+		} else {
+			return $this->httpReq('get',$this->_baseUrl.'files/'.urlencode($file_id)
+						.'?'.$this->buildQueryString($params));
+		}
 	}
 
 	/**
@@ -1300,13 +1310,9 @@ class AppDotNet {
 	 * are: include_annotations|include_file_annotations.
 	 * @return array An associative array representing the file data.
 	 */
-/*
 	public function getFiles($file_ids=array(), $params = array()) {
-
-		return $this->httpReq('get',$this->_baseUrl.'files'
-						.'?'.$this->buildQueryString($params));
+		return $this->getFile($file_ids, $params);
 	}
-*/
 
 	/**
 	 * Returns a user's file objects.

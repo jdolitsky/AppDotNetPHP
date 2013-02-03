@@ -41,6 +41,9 @@ class AppDotNet {
 	// The scope the user has
 	private $_scope = null;
 
+	// token scopes
+	private $_scopes=array();
+
 	// debug info
 	private $_last_request = null;
 	private $_last_response = null;
@@ -120,6 +123,7 @@ class AppDotNet {
 	 * Construct the proper Auth URL for the user to visit and either grant
 	 * or not access to your app. Usually you would place this as a link for
 	 * the user to client, or a redirect to send them to the auth URL.
+	 * Also can be called after authentication for additional scopes
 	 * @param string $callbackUri Where you want the user to be directed
 	 * after authenticating with App.net. This must be one of the URIs
 	 * allowed by your App.net application settings.
@@ -137,7 +141,14 @@ class AppDotNet {
 			'redirect_uri'=>$callback_uri,
 		);
 
-		$url = $this->_authUrl.'authenticate?'.$this->buildQueryString($data);
+		$url = $this->_authUrl;
+		if ($this->_accessToken) {
+			$url .= 'authorize?';
+		} else {
+			$url .= 'authenticate?';
+		}
+		$url .= $this->buildQueryString($data);
+
 		if ($scope) {
 			$url .= '&scope='.implode('+',$scope);
 		}
@@ -177,6 +188,35 @@ class AppDotNet {
 		// return what we have (this may be a token, or it may be nothing)
 		return $this->_accessToken;
 	}
+
+  /**
+   * Check the scope of current token to see if it has required scopes
+   * has to be done after a check
+   */
+  public function checkScopes($app_scopes) {
+    if (!count($this->_scopes)) {
+      return -1; // _scope is empty
+    }
+    $missing=array();
+    foreach($app_scopes as $scope) {
+      if (!in_array($scope,$this->_scopes)) {
+        if ($scope=='public_messages') {
+          // messages works for public_messages
+          if (in_array('messages',$this->_scopes)) {
+            // if we have messages in our scopes
+            continue;
+          }
+        }
+        $missing[]=$scope;
+      }
+    }
+    // identify the ones missing
+    if (count($missing)) {
+      // do something
+      return $missing;
+    }
+    return 0; // 0 missing
+  }
 
 	/**
 	 * Set the access token (eg: after retrieving it from offline storage)
@@ -292,6 +332,7 @@ class AppDotNet {
 					break;
 				case 'X-OAuth-Scopes':
 					$this->_scope = $v;
+					$this->_scopes=explode(',',$v);
 					break;
 			}
 		}

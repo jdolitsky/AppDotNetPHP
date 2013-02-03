@@ -1112,7 +1112,8 @@ class AppDotNet {
 	}
 
 	/**
-	 * Creates a stream for the current access token.
+	 * Creates a stream for the current app access token.
+	 *
 	 * @param array $objectTypes The objects you want to retrieve data for from the
 	 * stream. At time of writing these can be 'post', 'star', and/or 'user_follow'.
 	 * If you don't specify, all events will be retrieved.
@@ -1131,13 +1132,35 @@ class AppDotNet {
 		return $response;
 	}
 
+  /**
+   * Update stream for the current app access token
+   *
+   * @param integer $streamId The stream ID to update. This stream must have been
+   * created by the current access token.
+   * @param array $data allows object_types, type, filter_id and key to be updated. filter_id/key can be omitted
+   */
+  public function updateStream($streamId,$data) {
+    // objectTypes is likely required
+		if (is_null($data['object_types'])) {
+			$data['object_types'] = array('post','star','user_follow');
+		}
+		// type can still only be long_poll
+		if (is_null($data['type'])) {
+		  $data['type']='long_poll';
+		}
+		$data = json_encode($data);
+		$response = $this->httpReq('put',$this->_baseUrl.'streams/'.urlencode($streamId),$data,'application/json');
+		return $response;
+  }
+
 	/**
 	 * Deletes a stream if you no longer need it.
+	 *
 	 * @param integer $streamId The stream ID to delete. This stream must have been
 	 * created by the current access token.
 	 */
 	public function deleteStream($streamId) {
-		return $this->httpReq('delete',$this->_baseUrl.'streams'.urlencode($streamId));
+		return $this->httpReq('delete',$this->_baseUrl.'streams/'.urlencode($streamId));
 	}
 
 	/**

@@ -79,7 +79,7 @@ $clientSecret = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 $app = new AppDotNet($clientId,$clientSecret);
 
 $redirectUri  = 'http://localhost/callback.php';
-$scope        =  array('stream','email','write_post','follow','messages','update_profile','export');
+$scope        =  array('stream','email','write_post','follow','messages','update_profile','files','export');
 
 // create an authentication Url
 $url = $app->getAuthUrl($redirectUri,$scope);
@@ -130,7 +130,7 @@ $token = $app->getAppAccessToken();
 // create a stream
 // if you already have a stream you can skip this step
 // this stream is going to consume posts and stars (but not follows)
-$stream = $app->createStream(array('post','star','user_follow','stream_marker','message','channel','channel_subscription'));
+$stream = $app->createStream(array('post','star','user_follow','stream_marker','message','channel','channel_subscription','mute','token','file'));
 // you might want to save $stream['endpoint'] or $stream['id'] for later so
 // you don't have to re-create the stream
 

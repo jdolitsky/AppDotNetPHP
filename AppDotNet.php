@@ -326,13 +326,13 @@ class AppDotNet {
 		if($act != 'get') {
 			curl_setopt($ch, CURLOPT_POST, true);
 			// if they passed an array, build a list of parameters from it
-			if (is_array($params) && $act != 'post-img') {
+			if (is_array($params) && $act != 'post-raw') {
 				$params = $this->buildQueryString($params);
 			}
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
 			$headers[] = "Content-Type: ".$contentType;
 		}
-		if($act != 'post' && $act != 'post-img') {
+		if($act != 'post' && $act != 'post-raw') {
 			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($act));
 		}
 		if($act == 'get' && isset($params['access_token'])) {
@@ -855,7 +855,7 @@ class AppDotNet {
 	 */
 	protected function updateUserImage($which = 'avatar', $image = null) {
 		$data = array($which=>"@$image");
-		return $this->httpReq('post-img',$this->_baseUrl.'users/me/'.$which, $data, 'multipart/form-data');
+		return $this->httpReq('post-raw',$this->_baseUrl.'users/me/'.$which, $data, 'multipart/form-data');
 	}
 
 	public function updateUserAvatar($avatar = null) {
@@ -1238,6 +1238,114 @@ class AppDotNet {
 		while (true) {
 			$this->processStream(600);
 		}
+	}
+
+
+	/**
+	 * Upload a file to a user's file store
+	 * @param $file path reference to file
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are: include_annotations|include_file_annotations.
+	 * @return array An associative array representing the file
+	 */
+	public function createFile($file = null, $params=array()) {
+		$finfo = finfo_open(FILEINFO_MIME_TYPE);
+		$mime = finfo_file($finfo, $file);
+		finfo_close($finfo);
+
+		$data = array('content'=>"@$file;type=$mime", 'type'=> $params['metadata']);
+
+		return $this->httpReq('post-raw',$this->_baseUrl.'files', $data, 'multipart/form-data');
+	}
+
+
+	public function createFilePlaceholder($file = null, $params=array()) {
+		$name = basename($file);
+		$data = array('annotations' => $params['annotations'], 'kind' => $params['kind'],
+				'name' => $name, 'type' => $params['metadata']);
+		$json = json_encode($data);
+		return $this->httpReq('post',$this->_baseUrl.'files', $json, 'application/json');
+	}
+
+	public function updateFileContent($fileid, $file) {
+
+		$data = file_get_contents($file);
+		$finfo = finfo_open(FILEINFO_MIME_TYPE);
+		$mime = finfo_file($finfo, $file);
+		finfo_close($finfo);
+
+		return $this->httpReq('put',$this->_baseUrl.'files/' . $fileid
+						.'/content', $data, $mime);
+	}
+
+	 /**
+         * Allows for file rename and annotation changes.
+	 * @param integer $file_id The ID of the file to update
+	 * @param array $params An associative array of file parameters.
+	 * @return array An associative array representing the updated file
+         */
+        public function updateFile($file_id=null, $params=array()) {
+                $data = array('annotations' => $params['annotations'] , 'name' => $params['name']);
+                $json = json_encode($data);
+                return $this->httpReq('put',$this->_baseUrl.'files/'.urlencode($file_id), $json, 'application/json');
+        }
+
+	/**
+	 * Returns a specific File.
+	 * @param integer $file_id The ID of the file to retrieve
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are: include_annotations|include_file_annotations.
+	 * @return array An associative array representing the file
+	 */
+	public function getFile($file_id=null,$params = array()) {
+		if(is_array($file_id)) {
+			$ids = '';
+			foreach($file_id as $id) {
+				$ids .= $id . ',';
+			}
+			$params['ids'] = substr($ids, 0, -1);
+			return $this->httpReq('get',$this->_baseUrl.'files'
+						.'?'.$this->buildQueryString($params));
+		} else {
+			return $this->httpReq('get',$this->_baseUrl.'files/'.urlencode($file_id)
+						.'?'.$this->buildQueryString($params));
+		}
+	}
+
+	/**
+	 * Returns file objects.
+	 * @param array $file_ids The IDs of the files to retrieve
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are: include_annotations|include_file_annotations.
+	 * @return array An associative array representing the file data.
+	 */
+	public function getFiles($file_ids=array(), $params = array()) {
+		return $this->getFile($file_ids, $params);
+	}
+
+	/**
+	 * Returns a user's file objects.
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are: include_annotations|include_file_annotations|include_user_annotations.
+	 * @return array An associative array representing the file data.
+	 */
+	public function getUserFiles($params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'users/me/files'
+						.'?'.$this->buildQueryString($params));
+	}
+
+	/**
+	 * Delete a File. The current user must be the same user who created the File.
+	 * It returns the deleted File on success.
+	 * @param integer $file_id The ID of the file to delete
+	 * @return array An associative array representing the file that was deleted
+	 */
+	public function deleteFile($file_id=null) {
+		return $this->httpReq('delete',$this->_baseUrl.'files/'.urlencode($file_id));
 	}
 
 }

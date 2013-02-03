@@ -303,6 +303,12 @@ class AppDotNet {
 
 		$response = explode("\r\n\r\n",$response,2);
 		$headers = $response[0];
+
+                if($headers == 'HTTP/1.1 100 Continue') {
+                        $response = explode("\r\n\r\n",$response[1],2);
+                        $headers = $response[0];
+                }
+
 		if (isset($response[1])) {
 			$content = $response[1];
 		}

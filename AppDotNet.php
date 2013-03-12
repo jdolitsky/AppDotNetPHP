@@ -1277,8 +1277,9 @@ class AppDotNet {
 		$inQueue = null;
 		$sleepFor = 0;
 		do {
-			// if we haven't received anything within 30 seconds, reconnect
-			if (time()-$this->_lastStreamActivity>=30) {
+			// if we haven't received anything within 5.5 minutes, reconnect
+			// keepalives are sent every 5 minutes (measured on 2013-3-12 by @ryantharp)
+			if (time()-$this->_lastStreamActivity>=330) {
 				$this->reconnectStream();
 			}
 			curl_multi_exec($this->_multiStream, $active);

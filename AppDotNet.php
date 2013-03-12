@@ -89,6 +89,10 @@ class AppDotNet {
 
 	// strip envelope response from returned value
 	private $_stripResponseEnvelope=true;
+
+	// if processing stream_markers or any fast stream, decrease $sleepFor
+	public $streamingSleepFor=20000;
+
 	/**
 	 * Constructs an AppDotNet PHP object with the specified client ID and
 	 * client secret.
@@ -1194,13 +1198,14 @@ class AppDotNet {
 		}
 		else {
 			$pos = strpos($this->_streamBuffer,"\r\n");
-			if ($pos!==false) {
+			while ($pos!==false) {
 				$command = substr($this->_streamBuffer,0,$pos);
 				$this->_streamBuffer = substr($this->_streamBuffer,$pos+2);
 				$command = json_decode($command,true);
 				if ($command) {
 					call_user_func($this->_streamCallback,$command);
 				}
+				$pos = strpos($this->_streamBuffer,"\r\n");
 			}
 		}
 		return strlen($data);
@@ -1260,6 +1265,7 @@ class AppDotNet {
 	 * consume the stream without other actions, you can call processForever() instead.
 	 * @param float @microseconds The number of microseconds to process for before
 	 * returning. There are 1,000,000 microseconds in a second.
+	 *
 	 * @return void
 	 */
 	public function processStream($microseconds=null) {
@@ -1286,7 +1292,7 @@ class AppDotNet {
 			}
 			// sleep for a max of 2/10 of a second
 			$timeSoFar = (microtime(true)-$start)*1000000;
-			$sleepFor = 200000;
+			$sleepFor = $this->streamingSleepFor;
 			if ($timeSoFar+$sleepFor>$microseconds) {
 				$sleepFor = $microseconds - $timeSoFar;
 			}

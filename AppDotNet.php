@@ -645,6 +645,18 @@ class AppDotNet {
 	}
 
 	/**
+	 * Returns multiple users request by an array of user ids
+	 * @param array $params An associative array of optional general parameters.
+	 * This will likely change as the API evolves, as of this writing allowed keys
+	 * are: include_annotations|include_user_annotations.
+	 * @return array An associative array representing the users data.
+	 */
+	public function getUsers($user_arr, $params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'users?ids='.join(',',$user_arr)
+					.'&'.$this->buildQueryString($params));
+	}
+
+	/**
 	 * Add the specified user ID to the list of users followed.
 	 * Returns the User object of the user being followed.
 	 * @param integer $user_id The user ID of the user to follow.
@@ -715,12 +727,12 @@ class AppDotNet {
 		return $this->httpReq('get',$this->_baseUrl.'posts/stream/global?'.$this->buildQueryString($params));
 	}
 
-  /**
-   * List User interactions
-   */
-  public function getMyInteractions($params = array()) {
-    return $this->httpReq('get',$this->_baseUrl.'users/me/interactions?'.$this->buildQueryString($params));
-  }
+	/**
+	 * List User interactions
+	 */
+	public function getMyInteractions($params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'users/me/interactions?'.$this->buildQueryString($params));
+	}
 
 	/**
 	 * Retrieve a user's user ID by specifying their username.
@@ -919,104 +931,118 @@ class AppDotNet {
 			return $this->updateUserImage('cover', $cover);
 	}
 
-  /**
-   * update stream marker
-   */
-  public function updateStreamMarker($data = array()) {
+	/**
+	 * update stream marker
+	 */
+	public function updateStreamMarker($data = array()) {
 		$json = json_encode($data);
 		return $this->httpReq('post',$this->_baseUrl.'posts/marker', $json, 'application/json');
-  }
+	}
 
-  /**
-   * get a page of current user subscribed channels
-   */
-  public function getUserSubscriptions($params = array()) {
+	/**
+	 * get a page of current user subscribed channels
+	 */
+	public function getUserSubscriptions($params = array()) {
 		return $this->httpReq('get',$this->_baseUrl.'channels?'.$this->buildQueryString($params));
-  }
+	}
 
-  /**
-   * create a channel
-   * note: you cannot create a channel with type=net.app.core.pm (see createMessage)
-   */
-  public function createChannel($data = array()) {
+	/**
+	 * get user channels
+	 */
+	public function getMyChannels($params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'channels/me?'.$this->buildQueryString($params));
+	}
+
+	/**
+	 * create a channel
+	 * note: you cannot create a channel with type=net.app.core.pm (see createMessage)
+	 */
+	public function createChannel($data = array()) {
 		$json = json_encode($data);
 		return $this->httpReq('post',$this->_baseUrl.'channels'.($pm?'/pm/messsages':''), $json, 'application/json');
-  }
+	}
 
-  /**
-   * get channelid info
-   */
-  public function getChannel($channelid) {
-		return $this->httpReq('get',$this->_baseUrl.'channels/'.$channelid);
-  }
+	/**
+	 * get channelid info
+	 */
+	public function getChannel($channelid, $params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'channels/'.$channelid.'?'.$this->buildQueryString($params));
+	}
 
-  /**
-   * update channelid
-   */
-  public function updateChannel($channelid, $data = array()) {
+	/**
+	 * get multiple channels' info by an array of channelids
+	 */
+	public function getChannels($channels, $params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'channels?ids='.join(',',$channels).'&'.$this->buildQueryString($params));
+	}
+
+	/**
+	 * update channelid
+	 */
+	public function updateChannel($channelid, $data = array()) {
 		$json = json_encode($data);
 		return $this->httpReq('put',$this->_baseUrl.'channels/'.$channelid, $json, 'application/json');
-  }
+	}
 
-  /**
-   * subscribe from channelid
-   */
-  public function channelSubscribe($channelid) {
+	/**
+	 * subscribe from channelid
+	 */
+	public function channelSubscribe($channelid) {
 		return $this->httpReq('post',$this->_baseUrl.'channels/'.$channelid.'/subscribe');
-  }
+	}
 
-  /**
-   * unsubscribe from channelid
-   */
-  public function channelUnsubscribe($channelid) {
+	/**
+	 * unsubscribe from channelid
+	 */
+	public function channelUnsubscribe($channelid) {
 		return $this->httpReq('delete',$this->_baseUrl.'channels/'.$channelid.'/subscribe');
-  }
+	}
 
-  /**
-   * get all user objects subscribed to channelid
-   */
-  public function getChannelSubscriptions($channelid, $params = array()) {
+	/**
+	 * get all user objects subscribed to channelid
+	 */
+	public function getChannelSubscriptions($channelid, $params = array()) {
 		return $this->httpReq('get',$this->_baseUrl.'channel/'.$channelid.'/subscribers?'.$this->buildQueryString($params));
-  }
+	}
 
-  /**
-   * get all user IDs subscribed to channelid
-   */
-  public function getChannelSubscriptionsById($channelid) {
+	/**
+	 * get all user IDs subscribed to channelid
+	 */
+	public function getChannelSubscriptionsById($channelid) {
 		return $this->httpReq('get',$this->_baseUrl.'channel/'.$channelid.'/subscribers/ids');
-  }
+	}
 
 
-  /**
-   * get a page of messages in channelid
-   */
-  public function getMessages($channelid, $params = array()) {
+	/**
+	 * get a page of messages in channelid
+	 */
+	public function getMessages($channelid, $params = array()) {
 		return $this->httpReq('get',$this->_baseUrl.'channels/'.$channelid.'/messages?'.$this->buildQueryString($params));
-  }
+	}
 
-  /**
-   * create message
-   * @param $channelid numeric or "pm" for auto-chanenl (type=net.app.core.pm)
-   * @param $data array('text'=>'YOUR_MESSAGE') If a type=net.app.core.pm, then "destinations" key can be set to address as an array of people to send this PM too
-   */
-  public function createMessage($channelid,$data) {
+	/**
+	 * create message
+	 * @param $channelid numeric or "pm" for auto-chanenl (type=net.app.core.pm)
+	 * @param $data array('text'=>'YOUR_MESSAGE') If a type=net.app.core.pm, then "destinations" key can be set to address as an array of people to send this PM too
+	 */
+	public function createMessage($channelid,$data) {
 		$json = json_encode($data);
 		return $this->httpReq('post',$this->_baseUrl.'channels/'.$channelid.'/messages', $json, 'application/json');
-  }
+	}
 
-  /**
-   * get message
-   */
-  public function getMessage($channelid,$messageid) {
+	/**
+	 * get message
+	 */
+	public function getMessage($channelid,$messageid) {
 		return $this->httpReq('get',$this->_baseUrl.'channels/'.$channelid.'/messages/'.$messageid);
-  }
+	}
 
-  /**
-   * delete messsage
-   */
-  public function deleteMessage($channelid,$messageid) {
+	/**
+	 * delete messsage
+	 */
+	public function deleteMessage($channelid,$messageid) {
 		return $this->httpReq('delete',$this->_baseUrl.'channels/'.$channelid.'/messages/'.$messageid);
-  }
+	}
 
 	public function getLastRequest() {
 		return $this->_last_request;
@@ -1142,15 +1168,15 @@ class AppDotNet {
 		return $response;
 	}
 
-  /**
-   * Update stream for the current app access token
-   *
-   * @param integer $streamId The stream ID to update. This stream must have been
-   * created by the current access token.
-   * @param array $data allows object_types, type, filter_id and key to be updated. filter_id/key can be omitted
-   */
-  public function updateStream($streamId,$data) {
-    // objectTypes is likely required
+	/**
+	 * Update stream for the current app access token
+	 *
+	 * @param integer $streamId The stream ID to update. This stream must have been
+	 * created by the current access token.
+	 * @param array $data allows object_types, type, filter_id and key to be updated. filter_id/key can be omitted
+	 */
+	public function updateStream($streamId,$data) {
+		// objectTypes is likely required
 		if (is_null($data['object_types'])) {
 			$data['object_types'] = array('post','star','user_follow');
 		}
@@ -1356,17 +1382,17 @@ class AppDotNet {
 						.'/content', $data, $mime);
 	}
 
-	 /**
-         * Allows for file rename and annotation changes.
-	 * @param integer $file_id The ID of the file to update
-	 * @param array $params An associative array of file parameters.
-	 * @return array An associative array representing the updated file
-         */
-        public function updateFile($file_id=null, $params=array()) {
-                $data = array('annotations' => $params['annotations'] , 'name' => $params['name']);
-                $json = json_encode($data);
-                return $this->httpReq('put',$this->_baseUrl.'files/'.urlencode($file_id), $json, 'application/json');
-        }
+		/**
+		 * Allows for file rename and annotation changes.
+		 * @param integer $file_id The ID of the file to update
+		 * @param array $params An associative array of file parameters.
+		 * @return array An associative array representing the updated file
+		*/
+		public function updateFile($file_id=null, $params=array()) {
+			$data = array('annotations' => $params['annotations'] , 'name' => $params['name']);
+			$json = json_encode($data);
+			return $this->httpReq('put',$this->_baseUrl.'files/'.urlencode($file_id), $json, 'application/json');
+		}
 
 	/**
 	 * Returns a specific File.
@@ -1377,18 +1403,8 @@ class AppDotNet {
 	 * @return array An associative array representing the file
 	 */
 	public function getFile($file_id=null,$params = array()) {
-		if(is_array($file_id)) {
-			$ids = '';
-			foreach($file_id as $id) {
-				$ids .= $id . ',';
-			}
-			$params['ids'] = substr($ids, 0, -1);
-			return $this->httpReq('get',$this->_baseUrl.'files'
-						.'?'.$this->buildQueryString($params));
-		} else {
-			return $this->httpReq('get',$this->_baseUrl.'files/'.urlencode($file_id)
-						.'?'.$this->buildQueryString($params));
-		}
+		return $this->httpReq('get',$this->_baseUrl.'files/'.urlencode($file_id)
+					.'?'.$this->buildQueryString($params));
 	}
 
 	/**
@@ -1400,7 +1416,13 @@ class AppDotNet {
 	 * @return array An associative array representing the file data.
 	 */
 	public function getFiles($file_ids=array(), $params = array()) {
-		return $this->getFile($file_ids, $params);
+		$ids = '';
+		foreach($file_id as $id) {
+			$ids .= $id . ',';
+		}
+		$params['ids'] = substr($ids, 0, -1);
+		return $this->httpReq('get',$this->_baseUrl.'files'
+					.'?'.$this->buildQueryString($params));
 	}
 
 	/**

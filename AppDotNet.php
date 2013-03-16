@@ -1044,6 +1044,53 @@ class AppDotNet {
 		return $this->httpReq('delete',$this->_baseUrl.'channels/'.$channelid.'/messages/'.$messageid);
 	}
 
+
+	/**
+	 * Get Application Information
+	 */
+	public function getAppTokenInfo() {
+		// requires appAccessToken
+		if (!$this->_appAccessToken) {
+			$this->getAppAccessToken();
+		}
+		// ensure request is made with our appAccessToken
+		$params['access_token']=$this->_appAccessToken;
+		return $this->httpReq('get',$this->_baseUrl.'token',$params);
+	}
+
+	/**
+	 * Get User Information
+	 */
+	public function getUserTokenInfo() {
+		return $this->httpReq('get',$this->_baseUrl.'token');
+	}
+
+	/**
+	 * Get Application Authorized User IDs
+	 */
+	public function getAppUserIDs() {
+		// requires appAccessToken
+		if (!$this->_appAccessToken) {
+			$this->getAppAccessToken();
+		}
+		// ensure request is made with our appAccessToken
+		$params['access_token']=$this->_appAccessToken;
+		return $this->httpReq('get',$this->_baseUrl.'apps/me/tokens/user_ids',$params);
+	}
+
+	/**
+	 * Get Application Authorized User Tokens
+	 */
+	public function getAppUserTokens() {
+		// requires appAccessToken
+		if (!$this->_appAccessToken) {
+			$this->getAppAccessToken();
+		}
+		// ensure request is made with our appAccessToken
+		$params['access_token']=$this->_appAccessToken;
+		return $this->httpReq('get',$this->_baseUrl.'apps/me/tokens',$params);
+	}
+
 	public function getLastRequest() {
 		return $this->_last_request;
 	}

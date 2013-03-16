@@ -23,6 +23,9 @@ class AppDotNet {
 	// stores the access token after login
 	private $_accessToken = null;
 
+	// stores the App access token if we have it
+	private $_appAccessToken = null;
+
 	// stores the user ID returned when fetching the auth token
 	private $_user_id = null;
 
@@ -253,6 +256,7 @@ class AppDotNet {
 		$res = $this->httpReq('post',$this->_authUrl.'access_token', $data);
 
 		// store it for later
+		$this->_appAccessToken = $res['access_token'];
 		$this->_accessToken = $res['access_token'];
 		$this->_username = null;
 		$this->_user_id = null;

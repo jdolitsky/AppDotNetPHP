@@ -1397,19 +1397,80 @@ class AppDotNet {
 
 	/**
 	 * Upload a file to a user's file store
-	 * @param $file path reference to file
+	 * @param string $file A string containing the path of the file to upload.
+	 * @param array $data Additional data about the file you're uploading. At the
+	 * moment accepted keys are: mime-type, kind, type, name, public and annotations. 
+	 * - If you don't specify mime-type, ADNPHP will attempt to guess the mime type 
+	 * based on the file, however this isn't always reliable.
+	 * - If you don't specify kind ADNPHP will attempt to determine if the file is 
+	 * an image or not. 
+	 * - If you don't specify name, ADNPHP will use the filename of the first
+	 * parameter. 
+	 * - If you don't specify public, your file will be uploaded as a private file. 
+	 * - Type is REQUIRED.
 	 * @param array $params An associative array of optional general parameters.
 	 * This will likely change as the API evolves, as of this writing allowed keys
 	 * are: include_annotations|include_file_annotations.
 	 * @return array An associative array representing the file
 	 */
-	public function createFile($file = null, $params=array()) {
-		$finfo = finfo_open(FILEINFO_MIME_TYPE);
-		$mime = finfo_file($finfo, $file);
-		finfo_close($finfo);
+	public function createFile($file, $data, $params=array()) {
+		if (!$file) {
+			throw new AppDotNetException('You must specify a path to a file');
+		}
+		if (!file_exists($file)) {
+			throw new AppDotNetException('File path specified does not exist');
+		}
+		if (!is_readable($file)) {
+			throw new AppDotNetException('File path specified is not readable');
+		}
 
-		$data = array('content'=>"@$file;type=$mime", 'type'=> $params['metadata']);
+		if (!$data) {
+			$data = array();
+		}
 
+		if (!array_key_exists('type',$data) || !$data['type']) {
+			throw new AppDotNetException('Type is required when creating a file');
+		}
+
+		if (!array_key_exists('name',$data)) {
+			$data['name'] = basename($file);
+		}
+
+		if (array_key_exists('mime-type',$data)) {
+			$mimeType = $data['mime-type'];
+			unset($data['mime-type']);
+		}
+		else {
+			$mimeType = null;
+		}
+		if (!array_key_exists('kind',$data)) {
+			$test = @getimagesize($path);
+			if ($test && array_key_exists('mime',$test)) {
+				$data['kind'] = 'image';
+				if (!$mimeType) {
+					$mimeType = $test['mime'];
+				}
+			}
+			else {
+				$data['kind'] = 'other';
+			}
+		}
+		if (!$mimeType) {
+			$finfo = finfo_open(FILEINFO_MIME_TYPE);
+			$mimeType = finfo_file($finfo, $file);
+			finfo_close($finfo);
+		}
+		if (!$mimeType) {
+			throw new AppDotNetException('Unable to determine mime type of file, try specifying it explicitly');
+		}
+		if (!array_key_exists('public',$data) || !$data['public']) {
+			$public = false;
+		}
+		else {
+			$public = true;
+		}
+
+		$data['content'] = "@$file;type=$mimeType";
 		return $this->httpReq('post-raw',$this->_baseUrl.'files', $data, 'multipart/form-data');
 	}
 

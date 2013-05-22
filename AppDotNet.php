@@ -527,6 +527,31 @@ class AppDotNet {
 	}
 
 	/**
+	 * Process user description, message or post text.
+	 * Mentions and hashtags will be parsed out of the
+	 * text, as will bare URLs. To create a link in the text without using a
+	 * bare URL, include the anchor text in the object text and include a link
+	 * entity in the function call.
+	 * @param string $text The text of the description/message/post
+	 * @param array $data An associative array of optional post data. This
+	 * will likely change as the API evolves, as of this writing allowed keys are:
+	 * reply_to, and annotations. "annotations" may be a complex object represented
+	 * by an associative array.
+	 * @param array $params An associative array of optional data to be included
+         * in the URL (such as 'include_annotations' and 'include_machine')
+	 * @return array An associative array representing the post.
+	 */
+	public function processText($text=null, $data = array(), $params = array()) {
+		$data['text'] = $text;
+		$json = json_encode($data);
+		$qs = '';
+		if (!empty($params)) {
+			$qs = '?'.$this->buildQueryString($params);
+		}
+		return $this->httpReq('post',$this->_baseUrl.'text/process'.$qs, $json, 'application/json');
+	}
+
+	/**
 	 * Create a new Post object. Mentions and hashtags will be parsed out of the
 	 * post text, as will bare URLs. To create a link in a post without using a
 	 * bare URL, include the anchor text in the post's text and include a link
@@ -904,9 +929,9 @@ class AppDotNet {
 	*/
 	public function getUserUnifiedStream($params = array()) {
 		return $this->httpReq('get',$this->_baseUrl.'posts/stream/unified?'.$this->buildQueryString($params));
-  }
+	}
 
-  /**
+	/**
 	 * Update Profile Data via JSON
 	 * @data array containing user descriptors
 	 */

@@ -116,7 +116,7 @@ class AppDotNet {
 	}
 
 	/**
-	 * Set whether or not to strip Envelopse Response (meta) information
+	 * Set whether or not to strip Envelope Response (meta) information
 	 * This option will be deprecated in the future. Is it to allow
 	 * a stepped migration path between code expecting the old behavior
 	 * and new behavior. When not stripped, you still can use the proper
@@ -538,7 +538,7 @@ class AppDotNet {
 	 * reply_to, and annotations. "annotations" may be a complex object represented
 	 * by an associative array.
 	 * @param array $params An associative array of optional data to be included
-         * in the URL (such as 'include_annotations' and 'include_machine')
+	 * in the URL (such as 'include_annotations' and 'include_machine')
 	 * @return array An associative array representing the post.
 	 */
 	public function processText($text=null, $data = array(), $params = array()) {
@@ -935,9 +935,10 @@ class AppDotNet {
 	 * Update Profile Data via JSON
 	 * @data array containing user descriptors
 	 */
-	public function updateUserData($data = array()) {
+	public function updateUserData($data = array(), $params = array()) {
 		$json = json_encode($data);
-		return $this->httpReq('put',$this->_baseUrl.'users/me', $json, 'application/json');
+		return $this->httpReq('put',$this->_baseUrl.'users/me'.'?'.
+						$this->buildQueryString($params), $json, 'application/json');
 	}
 
 	/**
@@ -1544,6 +1545,18 @@ class AppDotNet {
 					.'?'.$this->buildQueryString($params));
 	}
 
+	public function getFileContent($file_id=null,$params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'files/'.urlencode($file_id)
+					.'/content?'.$this->buildQueryString($params));
+	}
+
+	/** $file_key : derived_file_key */
+	public function getDerivedFileContent($file_id=null,$file_key=null,$params = array()) {
+		return $this->httpReq('get',$this->_baseUrl.'files/'.urlencode($file_id)
+					.'/content/'.urlencode($file_key)
+					.'?'.$this->buildQueryString($params));
+	}
+
 	/**
 	 * Returns file objects.
 	 * @param array $file_ids The IDs of the files to retrieve
@@ -1554,7 +1567,7 @@ class AppDotNet {
 	 */
 	public function getFiles($file_ids=array(), $params = array()) {
 		$ids = '';
-		foreach($file_id as $id) {
+		foreach($file_ids as $id) {
 			$ids .= $id . ',';
 		}
 		$params['ids'] = substr($ids, 0, -1);

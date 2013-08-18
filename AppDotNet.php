@@ -196,34 +196,34 @@ class AppDotNet {
 		return $this->_accessToken;
 	}
 
-  /**
-   * Check the scope of current token to see if it has required scopes
-   * has to be done after a check
-   */
-  public function checkScopes($app_scopes) {
-    if (!count($this->_scopes)) {
-      return -1; // _scope is empty
-    }
-    $missing=array();
-    foreach($app_scopes as $scope) {
-      if (!in_array($scope,$this->_scopes)) {
-        if ($scope=='public_messages') {
-          // messages works for public_messages
-          if (in_array('messages',$this->_scopes)) {
-            // if we have messages in our scopes
-            continue;
-          }
-        }
-        $missing[]=$scope;
-      }
-    }
-    // identify the ones missing
-    if (count($missing)) {
-      // do something
-      return $missing;
-    }
-    return 0; // 0 missing
-  }
+	/**
+	 * Check the scope of current token to see if it has required scopes
+	 * has to be done after a check
+	 */
+	public function checkScopes($app_scopes) {
+		if (!count($this->_scopes)) {
+			return -1; // _scope is empty
+		}
+		$missing=array();
+		foreach($app_scopes as $scope) {
+			if (!in_array($scope,$this->_scopes)) {
+				if ($scope=='public_messages') {
+					// messages works for public_messages
+					if (in_array('messages',$this->_scopes)) {
+						// if we have messages in our scopes
+						continue;
+					}
+				}
+				$missing[]=$scope;
+			}
+		}
+		// identify the ones missing
+		if (count($missing)) {
+			// do something
+			return $missing;
+		}
+		return 0; // 0 missing
+	 }
 
 	/**
 	 * Set the access token (eg: after retrieving it from offline storage)
@@ -286,7 +286,7 @@ class AppDotNet {
 	 * When this time is up you'll have getRateLimit() available again.
 	 */
 	public function getRateLimitReset() {
-		return $this->$_rateLimitReset;
+		return $this->_rateLimitReset;
 	}
 
 	/**
@@ -312,10 +312,10 @@ class AppDotNet {
 		$response = explode("\r\n\r\n",$response,2);
 		$headers = $response[0];
 
-                if($headers == 'HTTP/1.1 100 Continue') {
-                        $response = explode("\r\n\r\n",$response[1],2);
-                        $headers = $response[0];
-                }
+		if($headers == 'HTTP/1.1 100 Continue') {
+			$response = explode("\r\n\r\n",$response[1],2);
+			$headers = $response[0];
+		}
 
 		if (isset($response[1])) {
 			$content = $response[1];
@@ -491,6 +491,13 @@ class AppDotNet {
 	}
 
 	/**
+	 * Fetch API configuration object
+	 */
+	public function getConfig() {
+		return $this->httpReq('get',$this->_baseUrl.'config');
+	}
+
+	/**
 	 * Return the Filters for the current user.
 	 */
 	public function getAllFilters() {
@@ -562,7 +569,7 @@ class AppDotNet {
 	 * reply_to, and annotations. "annotations" may be a complex object represented
 	 * by an associative array.
 	 * @param array $params An associative array of optional data to be included
-         * in the URL (such as 'include_annotations' and 'include_machine')
+	 * in the URL (such as 'include_annotations' and 'include_machine')
 	 * @return array An associative array representing the post.
 	 */
 	public function createPost($text=null, $data = array(), $params = array()) {
@@ -1259,12 +1266,12 @@ class AppDotNet {
 		}
 		// type can still only be long_poll
 		if (is_null($data['type'])) {
-		  $data['type']='long_poll';
+			 $data['type']='long_poll';
 		}
 		$data = json_encode($data);
 		$response = $this->httpReq('put',$this->_baseUrl.'streams/'.urlencode($streamId),$data,'application/json');
 		return $response;
-  }
+	 }
 
 	/**
 	 * Deletes a stream if you no longer need it.

@@ -286,7 +286,7 @@ class AppDotNet {
 	 * When this time is up you'll have getRateLimit() available again.
 	 */
 	public function getRateLimitReset() {
-		return $this->$_rateLimitReset;
+		return $this->_rateLimitReset;
 	}
 
 	/**
@@ -488,6 +488,13 @@ class AppDotNet {
 	 */
 	public function getResponseMarker() {
 		return $this->_last_marker;
+	}
+
+	/**
+	 * Fetch API configuration object
+	 */
+	public function getConfig() {
+		return $this->httpReq('get',$this->_baseUrl.'config');
 	}
 
 	/**

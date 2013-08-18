@@ -168,7 +168,7 @@ while (true) {
 ?>
 ```
 
-Copyright (c) 2012, Josh Dolitsky
+Copyright (c) 2013, Josh Dolitsky
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

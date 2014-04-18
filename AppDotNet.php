@@ -898,14 +898,20 @@ class AppDotNet {
 	* @return array An array of associative arrays, each representing one post.
 	* or false on error
 	*/
-	public function searchPosts($params = array(), $query='', $order='score') {
+	public function searchPosts($params = array(), $query='', $order='default') {
 		if (!is_array($params)) {
 			return false;
 		}
 		if (!empty($query)) {
 			$params['query']=$query;
 		}
-		$params['order']=$order;
+		if ($order=='default') {
+			if (!empty($query)) {
+				$params['order']='score';
+			} else {
+				$params['order']='id';
+		}
+		}
 		return $this->httpReq('get',$this->_baseUrl.'posts/search?'.$this->buildQueryString($params));
 	}
 

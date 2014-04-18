@@ -890,6 +890,27 @@ class AppDotNet {
 	}
 
 	/**
+	* List the posts who match a specific search term
+	* @param array $params a list of filter, search query, and general Post parameters
+	* see: https://developers.app.net/reference/resources/post/search/
+	* @param string $query The search query. Supports
+	* normal search terms. Searches post text.
+	* @return array An array of associative arrays, each representing one post.
+	* or false on error
+	*/
+	public function searchPosts($params = array(), $query='', $order='score') {
+		if (!is_array($params)) {
+			return false;
+		}
+		if (!empty($query)) {
+			$params['query']=$query;
+		}
+		$params['order']=$order;
+		return $this->httpReq('get',$this->_baseUrl.'posts/search?'.$this->buildQueryString($params));
+	}
+
+
+	/**
 	* List the users who match a specific search term
 	* @param string $search The search query. Supports @username or #tag searches as
 	* well as normal search terms. Searches username, display name, bio information.
@@ -1432,14 +1453,14 @@ class AppDotNet {
 	 * Upload a file to a user's file store
 	 * @param string $file A string containing the path of the file to upload.
 	 * @param array $data Additional data about the file you're uploading. At the
-	 * moment accepted keys are: mime-type, kind, type, name, public and annotations. 
-	 * - If you don't specify mime-type, ADNPHP will attempt to guess the mime type 
+	 * moment accepted keys are: mime-type, kind, type, name, public and annotations.
+	 * - If you don't specify mime-type, ADNPHP will attempt to guess the mime type
 	 * based on the file, however this isn't always reliable.
-	 * - If you don't specify kind ADNPHP will attempt to determine if the file is 
-	 * an image or not. 
+	 * - If you don't specify kind ADNPHP will attempt to determine if the file is
+	 * an image or not.
 	 * - If you don't specify name, ADNPHP will use the filename of the first
-	 * parameter. 
-	 * - If you don't specify public, your file will be uploaded as a private file. 
+	 * parameter.
+	 * - If you don't specify public, your file will be uploaded as a private file.
 	 * - Type is REQUIRED.
 	 * @param array $params An associative array of optional general parameters.
 	 * This will likely change as the API evolves, as of this writing allowed keys

@@ -235,6 +235,16 @@ class AppDotNet {
 	}
 
 	/**
+	 * Deauthorize the current token (delete your authorization from the API)
+	 * Generally this is useful for logging users out from a web app, so they
+	 * don't get automatically logged back in the next time you redirect them
+	 * to the authorization URL.
+	 */
+	public function deauthorizeToken() {
+		return $this->httpReq('delete',$this->_baseUrl.'token');
+	}
+
+	/**
 	 * Retrieve an app access token from the app.net API. This allows you
 	 * to access the API without going through the user access flow if you
 	 * just want to (eg) consume global. App access tokens are required for

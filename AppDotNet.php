@@ -733,7 +733,18 @@ class AppDotNet {
 	public function getFollowing($user_id='me') {
 		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/following');
 	}
-
+	
+	/**
+	 * Returns an array of User ids the specified user is following.
+	 * @param mixed $user_id Either the ID of the user being followed, or
+	 * the string "me", which will retrieve posts for the user you're authenticated
+	 * as.
+	 * @return array user ids the specified user is following.
+	 */
+	public function getFollowingIDs($user_id='me') {
+		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/following/ids');
+	}
+	
 	/**
 	 * Returns an array of User objects for users following the specified user.
 	 * @param mixed $user_id Either the ID of the user being followed, or
@@ -745,7 +756,18 @@ class AppDotNet {
 	public function getFollowers($user_id='me') {
 		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/followers');
 	}
-
+	
+	/**
+	 * Returns an array of User ids for users following the specified user.
+	 * @param mixed $user_id Either the ID of the user being followed, or
+	 * the string "me", which will retrieve posts for the user you're authenticated
+	 * as.
+	 * @return array user ids for users following the specified user
+	 */
+	public function getFollowersIDs($user_id='me') {
+		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/followers/ids');
+	}
+	
 	/**
 	 * Return Posts matching a specific #hashtag.
 	 * @param string $hashtag The hashtag you're looking for.

@@ -1187,6 +1187,40 @@ class AppDotNet {
 		return $this->httpReq('get',$this->_baseUrl.'apps/me/tokens',$params);
 	}
 
+	/**
+	 * Fetch an Identity-Delegate-Token for the specified app client id
+	 * @link https://developers.app.net/reference/authentication/identity-delegation/
+	 */
+	public function getDelegateToken($clientId) {
+		// if there's no access token set, and they're returning from
+		// the auth page with a code, use the code to get a token
+		if (!$this->_accessToken) {
+			throw new AppDotNetException('You must call getAccessToken() or setAccessToken() before calling getDelegateToken()');
+		}
+
+		// construct the necessary elements to get a token
+		$data = array(
+			'delegate_client_id'=>$clientId,
+			'grant_type'=>'delegate',
+		);
+
+		// try and fetch the token with the above data
+		return $this->httpReq('post',$this->_authUrl.'access_token', $data);
+	}
+
+	/**
+	 * Verify an Identity-Delegate-Token
+	 * @link https://developers.app.net/reference/authentication/identity-delegation/
+	 */
+	public function verifyDelegateToken($token) {
+		// requires appAccessToken
+		if (!$this->_appAccessToken) {
+			$this->getAppAccessToken();
+		}
+		$params['delegate_token']=$token;
+		return $this->httpReq('get',$this->_baseUrl.'token',$params);
+	}
+
 	public function getLastRequest() {
 		return $this->_last_request;
 	}

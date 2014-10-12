@@ -15,7 +15,7 @@
  */
 class AppDotNet {
 
-	protected $_baseUrl = 'https://alpha-api.app.net/stream/0/';
+	protected $_baseUrl = 'https://api.app.net/';
 	protected $_authUrl = 'https://account.app.net/oauth/';
 
 	private $_authPostParams=array();
@@ -813,7 +813,7 @@ class AppDotNet {
 	public function getIdByUsername($username=null) {
 		if ($this->_accessToken) {
 			$res=$this->httpReq('get',$this->_baseUrl.'users/@'.$username);
-			$user_id=$res['data']['id'];
+			$user_id=$res['id'];
 		} else {
 			$ch = curl_init('https://alpha.app.net/'.urlencode(strtolower($username)));
 			curl_setopt($ch, CURLOPT_POST, false);

@@ -417,47 +417,54 @@ class AppDotNet {
 		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
 		$http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
+
 		if ($http_status==0) {
 			throw new AppDotNetException('Unable to connect to '.$req);
-		}
-		if ($http_status<200 || $http_status>=300) {
-			throw new AppDotNetException('HTTP error '.$this->_last_response);
 		}
 		if ($this->_last_request===false) {
 			if (!curl_getinfo($ch,CURLINFO_SSL_VERIFYRESULT)) {
 				throw new AppDotNetException('SSL verification failed, connection terminated.');
 			}
 		}
-		$response = $this->parseHeaders($this->_last_response);
-		$response = json_decode($response,true);
+		if ($this->_last_response) {
+			$response = $this->parseHeaders($this->_last_response);
+			if ($response) {
+				$response = json_decode($response,true);
 
-		if (isset($response['meta'])) {
-			if (isset($response['meta']['max_id'])) {
-				$this->_maxid=$response['meta']['max_id'];
-				$this->_minid=$response['meta']['min_id'];
-			}
-			if (isset($response['meta']['more'])) {
-				$this->_more=$response['meta']['more'];
-			}
-			if (isset($response['meta']['marker'])) {
-				$this->_last_marker=$response['meta']['marker'];
+				if (isset($response['meta'])) {
+					if (isset($response['meta']['max_id'])) {
+						$this->_maxid=$response['meta']['max_id'];
+						$this->_minid=$response['meta']['min_id'];
+					}
+					if (isset($response['meta']['more'])) {
+						$this->_more=$response['meta']['more'];
+					}
+					if (isset($response['meta']['marker'])) {
+						$this->_last_marker=$response['meta']['marker'];
+					}
+				}
+
+				// look for errors
+				if (isset($response['error'])) {
+					if (is_array($response['error'])) {
+						throw new AppDotNetException($response['error']['message'],
+										$response['error']['code']);
+					}
+					else {
+						throw new AppDotNetException($response['error']);
+					}
+				} 
+
+				// look for response migration errors
+				elseif (isset($response['meta']) && isset($response['meta']['error_message'])) {
+					throw new AppDotNetException($response['meta']['error_message'],$response['meta']['code']);
+				}
+
 			}
 		}
 
-		// look for errors
-		if (isset($response['error'])) {
-			if (is_array($response['error'])) {
-				throw new AppDotNetException($response['error']['message'],
-								$response['error']['code']);
-			}
-			else {
-				throw new AppDotNetException($response['error']);
-			}
-		}
-
-		// look for response migration errors
-		elseif (isset($response['meta']) && isset($response['meta']['error_message'])) {
-			throw new AppDotNetException($response['meta']['error_message'],$response['meta']['code']);
+		if ($http_status<200 || $http_status>=300) {
+			throw new AppDotNetException('HTTP error '.$http_status);
 		}
 
 		// if we've received a migration response, handle it and return data only

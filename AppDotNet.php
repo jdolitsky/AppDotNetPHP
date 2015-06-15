@@ -1141,6 +1141,13 @@ class AppDotNet {
 	public function getChannelSubscriptionsById($channelid) {
 		return $this->httpReq('get',$this->_baseUrl.'channel/'.$channelid.'/subscribers/ids');
 	}
+	
+	/**
+	 * mark channel inactive
+	 */
+	public function deleteChannel($channelid) {
+		return $this->httpReq('delete',$this->_baseUrl.'channels/'.$channelid);
+	}
 
 
 	/**

@@ -473,8 +473,13 @@ class AppDotNet {
 		}
 
 		// else non response migration response, just return it
-		else {
+		// else non response migration response, just return it
+		else if (isset($response)) {
 			return $response;
+		}
+
+		else {
+			throw new AppDotNetException("No response");
 		}
 	}
 

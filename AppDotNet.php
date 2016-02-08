@@ -15,7 +15,7 @@
  */
 class AppDotNet {
 
-	protected $_baseUrl = 'https://alpha-api.app.net/stream/0/';
+	protected $_baseUrl = 'https://api.app.net/';
 	protected $_authUrl = 'https://account.app.net/oauth/';
 
 	private $_authPostParams=array();
@@ -235,6 +235,16 @@ class AppDotNet {
 	}
 
 	/**
+	 * Deauthorize the current token (delete your authorization from the API)
+	 * Generally this is useful for logging users out from a web app, so they
+	 * don't get automatically logged back in the next time you redirect them
+	 * to the authorization URL.
+	 */
+	public function deauthorizeToken() {
+		return $this->httpReq('delete',$this->_baseUrl.'token');
+	}
+
+	/**
 	 * Retrieve an app access token from the app.net API. This allows you
 	 * to access the API without going through the user access flow if you
 	 * just want to (eg) consume global. App access tokens are required for
@@ -407,47 +417,54 @@ class AppDotNet {
 		$this->_last_request = curl_getinfo($ch,CURLINFO_HEADER_OUT);
 		$http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
+
 		if ($http_status==0) {
 			throw new AppDotNetException('Unable to connect to '.$req);
-		}
-		if ($http_status<200 || $http_status>=300) {
-			throw new AppDotNetException('HTTP error '.$this->_last_response);
 		}
 		if ($this->_last_request===false) {
 			if (!curl_getinfo($ch,CURLINFO_SSL_VERIFYRESULT)) {
 				throw new AppDotNetException('SSL verification failed, connection terminated.');
 			}
 		}
-		$response = $this->parseHeaders($this->_last_response);
-		$response = json_decode($response,true);
+		if ($this->_last_response) {
+			$response = $this->parseHeaders($this->_last_response);
+			if ($response) {
+				$response = json_decode($response,true);
 
-		if (isset($response['meta'])) {
-			if (isset($response['meta']['max_id'])) {
-				$this->_maxid=$response['meta']['max_id'];
-				$this->_minid=$response['meta']['min_id'];
-			}
-			if (isset($response['meta']['more'])) {
-				$this->_more=$response['meta']['more'];
-			}
-			if (isset($response['meta']['marker'])) {
-				$this->_last_marker=$response['meta']['marker'];
+				if (isset($response['meta'])) {
+					if (isset($response['meta']['max_id'])) {
+						$this->_maxid=$response['meta']['max_id'];
+						$this->_minid=$response['meta']['min_id'];
+					}
+					if (isset($response['meta']['more'])) {
+						$this->_more=$response['meta']['more'];
+					}
+					if (isset($response['meta']['marker'])) {
+						$this->_last_marker=$response['meta']['marker'];
+					}
+				}
+
+				// look for errors
+				if (isset($response['error'])) {
+					if (is_array($response['error'])) {
+						throw new AppDotNetException($response['error']['message'],
+										$response['error']['code']);
+					}
+					else {
+						throw new AppDotNetException($response['error']);
+					}
+				} 
+
+				// look for response migration errors
+				elseif (isset($response['meta']) && isset($response['meta']['error_message'])) {
+					throw new AppDotNetException($response['meta']['error_message'],$response['meta']['code']);
+				}
+
 			}
 		}
 
-		// look for errors
-		if (isset($response['error'])) {
-			if (is_array($response['error'])) {
-				throw new AppDotNetException($response['error']['message'],
-								$response['error']['code']);
-			}
-			else {
-				throw new AppDotNetException($response['error']);
-			}
-		}
-
-		// look for response migration errors
-		elseif (isset($response['meta']) && isset($response['meta']['error_message'])) {
-			throw new AppDotNetException($response['meta']['error_message'],$response['meta']['code']);
+		if ($http_status<200 || $http_status>=300) {
+			throw new AppDotNetException('HTTP error '.$http_status);
 		}
 
 		// if we've received a migration response, handle it and return data only
@@ -723,7 +740,18 @@ class AppDotNet {
 	public function getFollowing($user_id='me') {
 		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/following');
 	}
-
+	
+	/**
+	 * Returns an array of User ids the specified user is following.
+	 * @param mixed $user_id Either the ID of the user being followed, or
+	 * the string "me", which will retrieve posts for the user you're authenticated
+	 * as.
+	 * @return array user ids the specified user is following.
+	 */
+	public function getFollowingIDs($user_id='me') {
+		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/following/ids');
+	}
+	
 	/**
 	 * Returns an array of User objects for users following the specified user.
 	 * @param mixed $user_id Either the ID of the user being followed, or
@@ -735,7 +763,18 @@ class AppDotNet {
 	public function getFollowers($user_id='me') {
 		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/followers');
 	}
-
+	
+	/**
+	 * Returns an array of User ids for users following the specified user.
+	 * @param mixed $user_id Either the ID of the user being followed, or
+	 * the string "me", which will retrieve posts for the user you're authenticated
+	 * as.
+	 * @return array user ids for users following the specified user
+	 */
+	public function getFollowersIDs($user_id='me') {
+		return $this->httpReq('get',$this->_baseUrl.'users/'.$user_id.'/followers/ids');
+	}
+	
 	/**
 	 * Return Posts matching a specific #hashtag.
 	 * @param string $hashtag The hashtag you're looking for.
@@ -781,7 +820,7 @@ class AppDotNet {
 	public function getIdByUsername($username=null) {
 		if ($this->_accessToken) {
 			$res=$this->httpReq('get',$this->_baseUrl.'users/@'.$username);
-			$user_id=$res['data']['id'];
+			$user_id=$res['id'];
 		} else {
 			$ch = curl_init('https://alpha.app.net/'.urlencode(strtolower($username)));
 			curl_setopt($ch, CURLOPT_POST, false);
@@ -888,6 +927,33 @@ class AppDotNet {
 	public function deleteRepost($post_id){
 		return $this->httpReq('delete',$this->_baseUrl.'posts/'.urlencode($post_id).'/repost');
 	}
+
+	/**
+	* List the posts who match a specific search term
+	* @param array $params a list of filter, search query, and general Post parameters
+	* see: https://developers.app.net/reference/resources/post/search/
+	* @param string $query The search query. Supports
+	* normal search terms. Searches post text.
+	* @return array An array of associative arrays, each representing one post.
+	* or false on error
+	*/
+	public function searchPosts($params = array(), $query='', $order='default') {
+		if (!is_array($params)) {
+			return false;
+		}
+		if (!empty($query)) {
+			$params['query']=$query;
+		}
+		if ($order=='default') {
+			if (!empty($query)) {
+				$params['order']='score';
+			} else {
+				$params['order']='id';
+		}
+		}
+		return $this->httpReq('get',$this->_baseUrl.'posts/search?'.$this->buildQueryString($params));
+	}
+
 
 	/**
 	* List the users who match a specific search term
@@ -1126,6 +1192,40 @@ class AppDotNet {
 		// ensure request is made with our appAccessToken
 		$params['access_token']=$this->_appAccessToken;
 		return $this->httpReq('get',$this->_baseUrl.'apps/me/tokens',$params);
+	}
+
+	/**
+	 * Fetch an Identity-Delegate-Token for the specified app client id
+	 * @link https://developers.app.net/reference/authentication/identity-delegation/
+	 */
+	public function getDelegateToken($clientId) {
+		// if there's no access token set, and they're returning from
+		// the auth page with a code, use the code to get a token
+		if (!$this->_accessToken) {
+			throw new AppDotNetException('You must call getAccessToken() or setAccessToken() before calling getDelegateToken()');
+		}
+
+		// construct the necessary elements to get a token
+		$data = array(
+			'delegate_client_id'=>$clientId,
+			'grant_type'=>'delegate',
+		);
+
+		// try and fetch the token with the above data
+		return $this->httpReq('post',$this->_authUrl.'access_token', $data);
+	}
+
+	/**
+	 * Verify an Identity-Delegate-Token
+	 * @link https://developers.app.net/reference/authentication/identity-delegation/
+	 */
+	public function verifyDelegateToken($token) {
+		// requires appAccessToken
+		if (!$this->_appAccessToken) {
+			$this->getAppAccessToken();
+		}
+		$params['delegate_token']=$token;
+		return $this->httpReq('get',$this->_baseUrl.'token',$params);
 	}
 
 	public function getLastRequest() {
@@ -1432,14 +1532,14 @@ class AppDotNet {
 	 * Upload a file to a user's file store
 	 * @param string $file A string containing the path of the file to upload.
 	 * @param array $data Additional data about the file you're uploading. At the
-	 * moment accepted keys are: mime-type, kind, type, name, public and annotations. 
-	 * - If you don't specify mime-type, ADNPHP will attempt to guess the mime type 
+	 * moment accepted keys are: mime-type, kind, type, name, public and annotations.
+	 * - If you don't specify mime-type, ADNPHP will attempt to guess the mime type
 	 * based on the file, however this isn't always reliable.
-	 * - If you don't specify kind ADNPHP will attempt to determine if the file is 
-	 * an image or not. 
+	 * - If you don't specify kind ADNPHP will attempt to determine if the file is
+	 * an image or not.
 	 * - If you don't specify name, ADNPHP will use the filename of the first
-	 * parameter. 
-	 * - If you don't specify public, your file will be uploaded as a private file. 
+	 * parameter.
+	 * - If you don't specify public, your file will be uploaded as a private file.
 	 * - Type is REQUIRED.
 	 * @param array $params An associative array of optional general parameters.
 	 * This will likely change as the API evolves, as of this writing allowed keys

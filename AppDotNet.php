@@ -1603,7 +1603,7 @@ class AppDotNet {
 			$public = true;
 		}
 
-		$data['content'] = "@$file;type=$mimeType";
+		$data['content'] = new CurlFile($file, $mimeType);
 		return $this->httpReq('post-raw',$this->_baseUrl.'files', $data, 'multipart/form-data');
 	}
 

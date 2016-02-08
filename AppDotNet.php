@@ -473,8 +473,12 @@ class AppDotNet {
 		}
 
 		// else non response migration response, just return it
-		else {
+		else if (isset($response)) {
 			return $response;
+		}
+
+		else {
+			throw new AppDotNetException("No response");
 		}
 	}
 
@@ -949,13 +953,13 @@ class AppDotNet {
 				$params['order']='score';
 			} else {
 				$params['order']='id';
-    			}
+  			}
 		}
 		return $this->httpReq('get',$this->_baseUrl.'posts/search?'.$this->buildQueryString($params));
 	}
-    
-    
-    	/**
+
+
+    /**
 	* List the channels that match a specific search term
 	* @param array $params a list of filter, search query, and general Channel parameters
 	* see: https://developers.app.net/reference/resources/channel/search/

@@ -1020,7 +1020,11 @@ class AppDotNet {
 	 * @image path reference to image
 	 */
 	protected function updateUserImage($which = 'avatar', $image = null) {
-		$data = array($which=>"@$image");
+		$test = @getimagesize($image);
+		if ($test && array_key_exists('mime',$test)) {
+			$mimeType = $test['mime'];
+		}
+		$data = array($which=>new CurlFile($image, $mimeType));
 		return $this->httpReq('post-raw',$this->_baseUrl.'users/me/'.$which, $data, 'multipart/form-data');
 	}
 

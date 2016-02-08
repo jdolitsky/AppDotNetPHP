@@ -949,9 +949,36 @@ class AppDotNet {
 				$params['order']='score';
 			} else {
 				$params['order']='id';
-		}
+    			}
 		}
 		return $this->httpReq('get',$this->_baseUrl.'posts/search?'.$this->buildQueryString($params));
+	}
+    
+    
+    	/**
+	* List the channels that match a specific search term
+	* @param array $params a list of filter, search query, and general Channel parameters
+	* see: https://developers.app.net/reference/resources/channel/search/
+	* @param string $query The search query. Supports
+	* normal search terms. Searches common channel annotations.
+	* @return array An array of associative arrays, each representing one channel.
+	* or false on error
+	*/
+	public function searchChannels($params = array(), $query='', $order='default') {
+		if (!is_array($params)) {
+			return false;
+		}
+		if (!empty($query)) {
+			$params['q']=$query;
+		}
+		if ($order=='default') {
+			if (!empty($query)) {
+				$params['order']='id';
+			} else {
+				$params['order']='popularity';
+            		}
+		}
+		return $this->httpReq('get',$this->_baseUrl.'channels/search?'.$this->buildQueryString($params));
 	}
 
 
@@ -1113,6 +1140,13 @@ class AppDotNet {
 	 */
 	public function getChannelSubscriptionsById($channelid) {
 		return $this->httpReq('get',$this->_baseUrl.'channel/'.$channelid.'/subscribers/ids');
+	}
+	
+	/**
+	 * mark channel inactive
+	 */
+	public function deleteChannel($channelid) {
+		return $this->httpReq('delete',$this->_baseUrl.'channels/'.$channelid);
 	}
 
 
